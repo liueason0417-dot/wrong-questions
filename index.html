@@ -162,6 +162,7 @@
             width: 100%;
             background-color: #000;
             text-align: center;
+            position: relative;
         }
 
         .question-img {
@@ -193,6 +194,7 @@
         .tag-subject { background-color: #00796b; color: white; }
         .tag-type { background-color: #7b1fa2; color: white; }
         .tag-review { background-color: var(--warning-color); color: #000; }
+        .tag-date { background-color: #555555; color: #fff; }
 
         .concept-text {
             font-size: 14px;
@@ -201,11 +203,48 @@
             line-height: 1.4;
         }
 
+        .notes-box {
+            font-size: 13px;
+            color: #b0b0b0;
+            background-color: #262626;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            border-left: 3px solid var(--accent-color);
+            word-break: break-all;
+        }
+
+        .explanation-section {
+            margin-top: 10px;
+            border-top: 1px solid #2a2a2a;
+            padding-top: 10px;
+        }
+
+        .btn-toggle-exp {
+            background-color: #333;
+            color: #ddd;
+            padding: 6px;
+            font-size: 12px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+        .btn-toggle-exp:hover {
+            background-color: #444;
+        }
+
+        .explanation-img-box {
+            display: none;
+            margin-top: 8px;
+            background-color: #000;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
         .card-actions {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 10px;
+            margin-top: 15px;
         }
 
         .btn-review {
@@ -237,7 +276,7 @@
 <div class="container">
     <header>
         <h1>學測錯題數據庫 (雲端同步版)</h1>
-        <p style="color: #888; margin: 0;">全平台即時同步 · 自動生成專屬 AI 提示詞</p>
+        <p style="color: #888; margin: 0;">全平台即時同步 · 自動生成專屬 AI 提示詞 · 支援一圖多拆與摺疊詳解</p>
     </header>
 
     <div class="grid">
@@ -252,16 +291,22 @@
                 <h3 style="margin-top: 0;">2. 匯入與新增錯題</h3>
                 
                 <div class="import-box">
-                    <label style="margin-top:0;">AI 解析結果快速帶入</label>
-                    <input type="text" id="aiImport" placeholder="例: 國文,現代新詩,語境推敲,單選題" oninput="quickImport()">
+                    <label style="margin-top:0;">AI 解析結果快速帶入 (可多行自動拆分)</label>
+                    <textarea id="aiImport" rows="3" placeholder="單行例: 國文,現代新詩,語境推敲,單選題&#10;多行會自動拆分：&#10;英文,綜合測驗-第2題,主謂一致,單選題&#10;英文,綜合測驗-第5題,動詞搭配,單選題" oninput="quickImport()"></textarea>
                 </div>
 
                 <form id="wrongQuestionForm" onsubmit="saveQuestion(event)">
-                    <label>選擇題目照片</label>
-                    <input type="file" id="photoInput" accept="image/*" required>
+                    <label>選擇題目照片 (必填)</label>
+                    <input type="file" id="photoInput" accept="image/*">
+
+                    <label>選擇詳解照片 (選填)</label>
+                    <input type="file" id="explanationPhotoInput" accept="image/*">
+
+                    <label>備註 / 記筆記 (選填)</label>
+                    <input type="text" id="notes" placeholder="例如：寫在講義第 12 頁、粗心看錯">
 
                     <label>科目</label>
-                    <select id="subject" required>
+                    <select id="subject">
                         <option value="">選擇科目</option>
                         <option value="國文">國文</option>
                         <option value="英文">英文</option>
@@ -276,13 +321,13 @@
                     </select>
 
                     <label>單元</label>
-                    <input type="text" id="unit" placeholder="例如：現代新詩" required>
+                    <input type="text" id="unit" placeholder="例如：現代新詩">
 
                     <label>核心觀念</label>
-                    <input type="text" id="concept" placeholder="例如：詩意語境推敲" required>
+                    <input type="text" id="concept" placeholder="例如：詩意語境推敲">
 
                     <label>題型</label>
-                    <select id="type" required>
+                    <select id="type">
                         <option value="單選題">單選題</option>
                         <option value="多選題">多選題</option>
                         <option value="非選擇題">非選擇題</option>
@@ -339,7 +384,7 @@
         appId: "1:550257355969:web:79e07e09c977e861163840"
     };
 
-    // 初始化 Firebase (僅使用 Firestore 資料庫)
+    // 初始化 Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -351,7 +396,6 @@
         const filterSubject = document.getElementById("filterSubject").value;
         const sortOrder = document.getElementById("sortOrder").value;
 
-        // 即時監聽資料庫變化
         unsubscribe = db.collection("questions").onSnapshot((snapshot) => {
             const allItems = [];
             snapshot.forEach(doc => {
@@ -376,16 +420,19 @@
         const val = document.getElementById("aiImport").value.trim();
         if (!val) return;
         
-        const parts = val.split(/[,，]/);
-        if (parts.length >= 4) {
-            document.getElementById("subject").value = parts[0].trim();
-            document.getElementById("unit").value = parts[1].trim();
-            document.getElementById("concept").value = parts[2].trim();
-            document.getElementById("type").value = parts[3].trim();
+        const lines = val.split('\n').filter(l => l.trim().length > 0);
+        if (lines.length === 1) {
+            const parts = lines[0].split(/[,，]/);
+            if (parts.length >= 4) {
+                document.getElementById("subject").value = parts[0].trim();
+                document.getElementById("unit").value = parts[1].trim();
+                document.getElementById("concept").value = parts[2].trim();
+                document.getElementById("type").value = parts[3].trim();
+            }
         }
     }
 
-    // 圖片前置壓縮處理 (限制在約 800px 寬度，品質 0.65，確保壓縮在 150KB 以內)
+    // 圖片前置壓縮處理 (限制最大寬高 1000px，品質 0.7)
     function compressImage(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -395,7 +442,7 @@
                 img.src = event.target.result;
                 img.onload = () => {
                     const canvas = document.createElement("canvas");
-                    const max_size = 800; // 最大解析度寬高
+                    const max_size = 1000; 
                     let width = img.width;
                     let height = img.height;
 
@@ -415,49 +462,106 @@
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // 轉為 jpg 高壓縮，取得 Base64
-                    const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+                    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
                     resolve(dataUrl);
                 };
             };
         });
     }
 
-    // 儲存錯題到 Firestore (直接以壓縮後的 Base64 儲存)
+    // 儲存或批次拆分錯題到 Firestore
     async function saveQuestion(e) {
         e.preventDefault();
         const submitBtn = document.getElementById("submitBtn");
         const fileInput = document.getElementById("photoInput");
+        const expFileInput = document.getElementById("explanationPhotoInput");
 
         if (!fileInput.files || fileInput.files.length === 0) {
             alert("請選擇題目圖片！");
             return;
         }
 
+        const importVal = document.getElementById("aiImport").value.trim();
+        const lines = importVal.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        // 如果是單題手動模式，驗證表單是否填寫
+        if (lines.length <= 1) {
+            const subject = document.getElementById("subject").value;
+            const unit = document.getElementById("unit").value;
+            const concept = document.getElementById("concept").value;
+            const type = document.getElementById("type").value;
+            if (!subject || !unit || !concept || !type) {
+                alert("請填寫完整的科目、單元、核心觀念與題型！");
+                return;
+            }
+        }
+
         submitBtn.disabled = true;
         submitBtn.innerText = "正在壓縮並上傳雲端...";
 
         try {
+            // 壓縮題目照片
             const file = fileInput.files[0];
-            // 壓縮圖片
             const compressedBase64 = await compressImage(file);
 
-            // 寫入資料到 Firestore
-            const question = {
-                subject: document.getElementById("subject").value,
-                unit: document.getElementById("unit").value,
-                concept: document.getElementById("concept").value,
-                type: document.getElementById("type").value,
-                image: compressedBase64, // 存入壓縮後的 Base64 字串
-                reviewCount: 0,
-                timestamp: Date.now()
-            };
+            // 壓縮詳解照片 (選填)
+            let expBase64 = null;
+            if (expFileInput.files && expFileInput.files.length > 0) {
+                expBase64 = await compressImage(expFileInput.files[0]);
+            }
 
-            await db.collection("questions").add(question);
+            const notesText = document.getElementById("notes").value.trim();
+
+            // 批次寫入 Firestore 
+            const batch = db.batch();
+            
+            if (lines.length > 1) {
+                let successCount = 0;
+                lines.forEach(line => {
+                    const parts = line.split(/[,，]/);
+                    if (parts.length >= 4) {
+                        const question = {
+                            subject: parts[0].trim(),
+                            unit: parts[1].trim(),
+                            concept: parts[2].trim(),
+                            type: parts[3].trim(),
+                            image: compressedBase64, // 共用同一張壓縮後的題目照片
+                            explanationImage: expBase64, // 共用同張詳解
+                            notes: notesText,
+                            reviewCount: 0,
+                            timestamp: Date.now()
+                        };
+                        const docRef = db.collection("questions").doc();
+                        batch.set(docRef, question);
+                        successCount++;
+                    }
+                });
+                
+                if (successCount > 0) {
+                    await batch.commit();
+                    alert(`成功一鍵拆分，匯入 ${successCount} 題錯題！`);
+                } else {
+                    throw new Error("匯入內容格式不符。");
+                }
+            } else {
+                // 單題模式
+                const question = {
+                    subject: document.getElementById("subject").value,
+                    unit: document.getElementById("unit").value,
+                    concept: document.getElementById("concept").value,
+                    type: document.getElementById("type").value,
+                    image: compressedBase64,
+                    explanationImage: expBase64,
+                    notes: notesText,
+                    reviewCount: 0,
+                    timestamp: Date.now()
+                };
+                await db.collection("questions").add(question);
+                alert("雲端儲存成功！");
+            }
 
             document.getElementById("wrongQuestionForm").reset();
             document.getElementById("aiImport").value = "";
-            alert("雲端儲存成功！");
         } catch (err) {
             alert("上傳失敗：" + err.message);
         } finally {
@@ -488,6 +592,19 @@
         }
     }
 
+    // 摺疊/展開詳解控制
+    window.toggleExplanation = function(id) {
+        const box = document.getElementById(`exp-${id}`);
+        const btn = document.getElementById(`btn-exp-${id}`);
+        if (box.style.display === "none" || box.style.display === "") {
+            box.style.display = "block";
+            btn.innerText = "隱藏詳解";
+        } else {
+            box.style.display = "none";
+            btn.innerText = "查看詳解";
+        }
+    }
+
     // 動態產生專屬 AI 提示詞
     function updateAIPrompt(items) {
         const unitSet = new Set();
@@ -498,9 +615,16 @@
         let unitString = Array.from(unitSet).join("、");
         if (!unitString) unitString = "目前無既有單元，請依題目自行判斷";
 
-        const promptTemplate = `這是一張學測考題照片。請幫我分析這題，並「只」輸出成以下特定的格式（用半形逗號隔開），絕對不要有任何其他解釋、引言或 markdown 標籤：
+        const promptTemplate = `這是一張考題照片。裡面可能包含單一題目或一整組題目（例如綜合測驗、題組）。
+請幫我分析這張照片中「我寫錯或有手寫標記」的所有題目。
 
-科目,單元名稱,核心觀念,題型
+請針對「每一道題」單獨輸出一行，格式如下（用半形逗號隔開），絕對不要有任何額外解釋、題號符號、引言或 markdown 標籤：
+
+科目,單元名稱-第X題,核心觀念,題型
+
+【範例輸出】
+英文,綜合測驗-第2題,主謂一致(the number of),單選題
+英文,綜合測驗-第5題,動詞搭配(exercise talents),單選題
 
 【分類限制規範（請優先從以下既有清單中選擇，若完全不符合再幫我建立新的）】
 * 科目：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
@@ -525,10 +649,8 @@
         const listContainer = document.getElementById("questionsList");
         listContainer.innerHTML = "";
         
-        // 1. 篩選
         let filteredItems = items.filter(item => filterSub === "全部" || item.subject === filterSub);
 
-        // 2. 排序
         filteredItems.sort((a, b) => {
             if (sortOrder === "newest") return b.timestamp - a.timestamp;
             if (sortOrder === "oldest") return a.timestamp - b.timestamp;
@@ -537,8 +659,11 @@
             return 0;
         });
 
-        // 3. 渲染
         filteredItems.forEach(item => {
+            const dateStr = new Date(item.timestamp).toLocaleDateString('zh-TW');
+            const hasNotes = item.notes && item.notes.trim().length > 0;
+            const hasExplanation = item.explanationImage && item.explanationImage.trim().length > 0;
+
             const card = document.createElement("div");
             card.className = "question-card";
             card.innerHTML = `
@@ -550,10 +675,23 @@
                         <span class="tag tag-subject">${item.subject}</span>
                         <span class="tag tag-type">${item.type}</span>
                         <span class="tag tag-review">複習 ${item.reviewCount} 次</span>
+                        <span class="tag tag-date">${dateStr}</span>
+                        
                         <div class="concept-text">
                             <strong>單元：</strong>${item.unit}<br>
                             <strong>觀念：</strong>${item.concept}
                         </div>
+
+                        ${hasNotes ? `<div class="notes-box"><strong>備註：</strong>${item.notes}</div>` : ''}
+
+                        ${hasExplanation ? `
+                            <div class="explanation-section">
+                                <button class="btn-toggle-exp" id="btn-exp-${item.id}" onclick="toggleExplanation('${item.id}')">查看詳解</button>
+                                <div class="explanation-img-box" id="exp-${item.id}">
+                                    <img class="question-img" src="${item.explanationImage}" alt="詳解">
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="card-actions">
                         <button class="btn-review" onclick="incrementReview('${item.id}')">已複習 +1</button>
@@ -564,7 +702,6 @@
             listContainer.appendChild(card);
         });
 
-        // 4. 統計弱點並繪製雷達圖
         const stats = {};
         if (filterSub === "全部") {
             items.forEach(item => {
@@ -609,7 +746,6 @@
 
         const maxValue = Math.max(...values, 1);
 
-        // 畫蜘蛛網背景
         ctx.strokeStyle = "#333333";
         ctx.lineWidth = 1;
         for (let j = 1; j <= 4; j++) {
@@ -626,7 +762,6 @@
             ctx.stroke();
         }
 
-        // 畫軸線與標籤
         ctx.strokeStyle = "#444444";
         for (let i = 0; i < N; i++) {
             const angle = i * (2 * Math.PI / N) - Math.PI / 2;
@@ -647,7 +782,6 @@
             ctx.fillText(`${labels[i]} (${values[i]}題)`, labelX, labelY);
         }
 
-        // 畫弱點區域
         ctx.strokeStyle = "rgba(229, 115, 115, 0.8)";
         ctx.fillStyle = "rgba(229, 115, 115, 0.25)";
         ctx.lineWidth = 2;
