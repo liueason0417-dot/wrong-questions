@@ -35,7 +35,7 @@
 
         header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         h1 {
@@ -43,16 +43,25 @@
             margin-bottom: 5px;
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
+        /* 主畫面新增按鈕 */
+        .btn-main-add {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 25px auto;
+            display: block;
+            padding: 15px;
+            font-size: 16px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: background 0.2s;
         }
-
-        @media (min-width: 850px) {
-            .grid {
-                grid-template-columns: 350px 1fr;
-            }
+        .btn-main-add:hover {
+            background-color: var(--accent-hover);
         }
 
         .card {
@@ -64,15 +73,14 @@
             margin-bottom: 20px;
         }
 
-        label {
-            display: block;
-            margin-top: 12px;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #b0b0b0;
+        .filter-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
-        input, select, textarea {
+        select {
             width: 100%;
             padding: 8px;
             background-color: #2c2c2c;
@@ -81,62 +89,20 @@
             color: #fff;
             box-sizing: border-box;
         }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
-        }
-
-        button:hover {
-            background-color: var(--accent-hover);
-        }
-
-        button:disabled {
-            background-color: #555 !important;
-            cursor: not-allowed;
-        }
-
-        .btn-success { background-color: var(--success-color); margin-top: 5px; }
-        .btn-success:hover { background-color: #45a049; }
-
-        .import-box, .prompt-box {
-            background-color: #252525;
-            border: 1px dashed var(--accent-color);
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-        }
-
-        .prompt-box { border-color: var(--success-color); }
-
-        .filter-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
+        select:focus { outline: none; border-color: var(--accent-color); }
 
         .chart-container {
             text-align: center;
             margin-top: 15px;
+            overflow-x: auto;
         }
 
-        #radarChart {
-            max-width: 100%;
+        #weaknessChart {
             background-color: #1a1a1a;
             border-radius: 6px;
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
         }
 
         .questions-list {
@@ -145,7 +111,7 @@
             gap: 15px;
         }
 
-        @media (min-width: 1100px) {
+        @media (min-width: 850px) {
             .questions-list { grid-template-columns: 1fr 1fr; }
         }
 
@@ -174,31 +140,39 @@
         }
 
         .question-details {
-            padding: 15px;
+            padding: 12px 15px;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
 
-        .tag {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-right: 5px;
-            margin-bottom: 5px;
+        .card-meta-line {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
         }
 
-        .tag-subject { background-color: #00796b; color: white; }
-        .tag-type { background-color: #7b1fa2; color: white; }
-        .tag-review { background-color: var(--warning-color); color: #000; }
-        .tag-date { background-color: #555555; color: #fff; }
+        .tag-subject {
+            background-color: #00796b;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .meta-gray-text {
+            font-size: 12px;
+            color: #888;
+            margin-right: 10px;
+        }
 
         .concept-text {
             font-size: 14px;
-            margin: 8px 0;
+            margin: 4px 0 8px 0;
             color: #fff;
             line-height: 1.4;
         }
@@ -207,68 +181,168 @@
             font-size: 13px;
             color: #b0b0b0;
             background-color: #262626;
-            padding: 8px;
+            padding: 6px 10px;
             border-radius: 4px;
-            margin-top: 8px;
+            margin-top: 5px;
             border-left: 3px solid var(--accent-color);
             word-break: break-all;
         }
 
         .explanation-section {
-            margin-top: 10px;
-            border-top: 1px solid #2a2a2a;
-            padding-top: 10px;
-        }
-
-        .btn-toggle-exp {
-            background-color: #333;
-            color: #ddd;
-            padding: 6px;
-            font-size: 12px;
-            margin-top: 5px;
-            margin-bottom: 5px;
-        }
-        .btn-toggle-exp:hover {
-            background-color: #444;
-        }
-
-        .explanation-img-box {
-            display: none;
             margin-top: 8px;
-            background-color: #000;
-            border-radius: 4px;
-            overflow: hidden;
+            border-top: 1px solid #2a2a2a;
+            padding-top: 8px;
         }
+
+        .btn-toggle-exp, .btn-review, .btn-group-review, .delete-btn {
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-toggle-exp { background-color: #333; color: #ddd; padding: 5px; font-size: 12px; margin: 2px 0; }
+        .btn-toggle-exp:hover { background-color: #444; }
+        
+        .explanation-img-box { display: none; margin-top: 8px; background-color: #000; border-radius: 4px; overflow: hidden; }
 
         .card-actions {
             display: flex;
-            justify-content: space-between;
+            gap: 8px;
+            justify-content: flex-start;
             align-items: center;
-            margin-top: 15px;
+            margin-top: 12px;
         }
 
-        .btn-review {
-            background-color: var(--warning-color);
-            color: #000;
-            padding: 6px 12px;
-            margin: 0;
-            width: auto;
-            font-size: 13px;
-        }
-
+        .btn-review { background-color: var(--warning-color); color: #000; padding: 5px 10px; font-size: 12px; font-weight:bold; }
         .btn-review:hover { background-color: #fb8c00; }
+        .btn-group-review { background-color: var(--success-color); color: #fff; }
+        .btn-group-review:hover { background-color: #45a049; }
+        
+        .delete-btn { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); padding: 4px 8px; font-size: 11px; margin-left: auto; }
+        .delete-btn:hover { background-color: rgba(229, 115, 115, 0.1); }
 
-        .delete-btn {
-            background-color: transparent;
-            color: var(--danger-color);
-            border: 1px solid var(--danger-color);
-            padding: 5px 10px;
-            margin: 0;
-            font-size: 12px;
-            width: auto;
+        /* --- Modal (彈出視窗) 樣式 --- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.85); 
+            overflow-y: auto;
+            backdrop-filter: blur(5px);
         }
 
-        .delete-btn:hover { background-color: rgba(229, 115, 115, 0.1); }
+        .modal-content {
+            background-color: var(--bg-color);
+            margin: 40px auto;
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            width: 95%;
+            max-width: 900px;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            color: #888;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-modal:hover { color: #fff; }
+
+        .modal h2 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+
+        .prompt-box {
+            background-color: #1a1a1a;
+            border: 1px dashed var(--success-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .prompt-box textarea { width: 100%; background: #111; color: #888; border: 1px solid #333; padding: 8px; font-size: 12px; box-sizing:border-box; border-radius:4px; }
+        .btn-copy { width: 100%; padding: 8px; background: var(--success-color); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+
+        /* 上傳隊列樣式 */
+        .upload-trigger {
+            background: #252525;
+            border: 2px dashed var(--accent-color);
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+        }
+        .upload-trigger:hover { background: #2a2a2a; }
+        .upload-trigger input { display: none; }
+
+        .queue-item {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: var(--card-bg);
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        @media (min-width: 600px) {
+            .queue-item { flex-direction: row; }
+        }
+
+        .queue-img-wrap {
+            width: 100%;
+            max-width: 200px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .queue-img-preview {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            background: #000;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .queue-inputs {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .queue-inputs label { margin-top: 0; font-size: 13px; color: #aaa; }
+        .queue-inputs textarea, .queue-inputs input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box; }
+        .queue-inputs textarea { height: 90px; resize: vertical; }
+
+        .btn-submit-all {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-submit-all:disabled { background-color: #555; cursor: not-allowed; }
+
     </style>
 </head>
 <body>
@@ -276,105 +350,68 @@
 <div class="container">
     <header>
         <h1>學測錯題數據庫 (雲端同步版)</h1>
-        <p style="color: #888; margin: 0;">全平台即時同步 · 自動生成專屬 AI 提示詞 · 支援一圖多拆與摺疊詳解</p>
+        <p style="color: #888; margin: 0;">全平台即時同步 · 支援批量隊列處理 · 橫向觀念圖表</p>
     </header>
 
-    <div class="grid">
-        <div>
-            <div class="card prompt-box">
-                <h3 style="margin-top: 0; color: var(--success-color);">1. 獲取專屬 AI 指令</h3>
-                <textarea id="aiPromptText" rows="4" readonly style="font-size: 12px; color: #888; background: #1a1a1a;"></textarea>
-                <button class="btn-success" onclick="copyPrompt()">一鍵複製指令</button>
-            </div>
+    <button class="btn-main-add" onclick="openModal()">＋ 新增錯題 (支援多圖批次)</button>
 
-            <div class="card">
-                <h3 style="margin-top: 0;">2. 匯入與新增錯題</h3>
-                
-                <div class="import-box">
-                    <label style="margin-top:0;">AI 解析結果快速帶入 (可多行自動拆分)</label>
-                    <textarea id="aiImport" rows="3" placeholder="單行例: 國文,現代新詩,語境推敲,單選題&#10;多行會自動拆分：&#10;英文,綜合測驗-第2題,主謂一致,單選題&#10;英文,綜合測驗-第5題,動詞搭配,單選題" oninput="quickImport()"></textarea>
-                </div>
+    <div class="card">
+        <h3 style="margin-top: 0;">數據篩選 & 弱點排行</h3>
+        <div class="filter-group">
+            <select id="filterSubject" onchange="loadQuestions()">
+                <option value="全部">全部科目 (查看弱點)</option>
+                <option value="國文">國文</option>
+                <option value="英文">英文</option>
+                <option value="數學">數學</option>
+                <option value="物理">物理</option>
+                <option value="化學">化學</option>
+                <option value="生物">生物</option>
+                <option value="地科">地科</option>
+                <option value="歷史">歷史</option>
+                <option value="地理">地理</option>
+                <option value="公民">公民</option>
+            </select>
+            <select id="sortOrder" onchange="loadQuestions()">
+                <option value="newest">最新加入優先</option>
+                <option value="oldest">最舊加入優先</option>
+                <option value="reviewAsc">複習次數：少到多 (找弱點)</option>
+                <option value="reviewDesc">複習次數：多到少</option>
+            </select>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="weaknessChart" width="800" height="200"></canvas>
+        </div>
+    </div>
 
-                <form id="wrongQuestionForm" onsubmit="saveQuestion(event)">
-                    <label>選擇題目照片 (必填)</label>
-                    <input type="file" id="photoInput" accept="image/*">
+    <div class="questions-list" id="questionsList"></div>
+</div>
 
-                    <label>選擇詳解照片 (選填)</label>
-                    <input type="file" id="explanationPhotoInput" accept="image/*">
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h2>批次新增錯題</h2>
 
-                    <label>備註 / 記筆記 (選填)</label>
-                    <input type="text" id="notes" placeholder="例如：寫在講義第 12 頁、粗心看錯">
-
-                    <label>科目</label>
-                    <select id="subject">
-                        <option value="">選擇科目</option>
-                        <option value="國文">國文</option>
-                        <option value="英文">英文</option>
-                        <option value="數學">數學</option>
-                        <option value="物理">物理</option>
-                        <option value="化學">化學</option>
-                        <option value="生物">生物</option>
-                        <option value="地科">地科</option>
-                        <option value="歷史">歷史</option>
-                        <option value="地理">地理</option>
-                        <option value="公民">公民</option>
-                    </select>
-
-                    <label>單元</label>
-                    <input type="text" id="unit" placeholder="例如：現代新詩">
-
-                    <label>核心觀念</label>
-                    <input type="text" id="concept" placeholder="例如：詩意語境推敲">
-
-                    <label>題型</label>
-                    <select id="type">
-                        <option value="單選題">單選題</option>
-                        <option value="多選題">多選題</option>
-                        <option value="非選擇題">非選擇題</option>
-                    </select>
-
-                    <button type="submit" id="submitBtn">儲存此錯題</button>
-                </form>
-            </div>
+        <div class="prompt-box">
+            <label style="color:var(--success-color); font-weight:bold; margin-top:0;">1. 獲取專屬 AI 指令</label>
+            <textarea id="aiPromptText" rows="3" readonly></textarea>
+            <button class="btn-copy" onclick="copyPrompt()">一鍵複製指令給 AI</button>
         </div>
 
-        <div>
-            <div class="card">
-                <h3 style="margin-top: 0;">3. 數據篩選 & 弱點分析</h3>
-                <div class="filter-group">
-                    <select id="filterSubject" onchange="loadQuestions()">
-                        <option value="全部">全部科目 (查看弱點)</option>
-                        <option value="國文">國文</option>
-                        <option value="英文">英文</option>
-                        <option value="數學">數學</option>
-                        <option value="物理">物理</option>
-                        <option value="化學">化學</option>
-                        <option value="生物">生物</option>
-                        <option value="地科">地科</option>
-                        <option value="歷史">歷史</option>
-                        <option value="地理">地理</option>
-                        <option value="公民">公民</option>
-                    </select>
-                    <select id="sortOrder" onchange="loadQuestions()">
-                        <option value="newest">最新加入優先</option>
-                        <option value="oldest">最舊加入優先</option>
-                        <option value="reviewAsc">複習次數：少到多 (找弱點)</option>
-                        <option value="reviewDesc">複習次數：多到少</option>
-                    </select>
-                </div>
-                
-                <div class="chart-container">
-                    <canvas id="radarChart" width="400" height="300"></canvas>
-                </div>
+        <label style="font-weight:bold; color:#fff; font-size:15px; margin-bottom:10px;">2. 選擇考卷照片 (可一次多選)</label>
+        <label class="upload-trigger">
+            <span style="font-size:16px; color:#fff;">📁 點擊選取題目照片 (可選多張)</span>
+            <input type="file" id="multiPhotoInput" accept="image/*" multiple onchange="handleFilesSelect(event)">
+        </label>
+
+        <div id="queueContainer">
             </div>
 
-            <div class="questions-list" id="questionsList"></div>
-        </div>
+        <button id="submitAllBtn" class="btn-submit-all" style="display:none;" onclick="saveAllQuestions()">全部儲存並上傳</button>
     </div>
 </div>
 
 <script>
-    // 你的 Firebase Config 帳號資訊
     const firebaseConfig = {
         apiKey: "AIzaSyA5xWtkaPt0_5doRo55WLIbBroI22ypkZ8",
         authDomain: "ai-vocab-coach.firebaseapp.com",
@@ -384,12 +421,16 @@
         appId: "1:550257355969:web:79e07e09c977e861163840"
     };
 
-    // 初始化 Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // 監聽並自動載入雲端資料
     let unsubscribe = null;
+    let selectedFilesQueue = []; // 儲存使用者選取的圖片檔案
+
+    window.onload = function() {
+        loadQuestions();
+    };
+
     function loadQuestions() {
         if (unsubscribe) unsubscribe();
 
@@ -411,28 +452,68 @@
         });
     }
 
-    window.onload = function() {
-        loadQuestions();
-    };
+    /* --- Modal 與隊列邏輯 --- */
+    function openModal() {
+        document.getElementById("addModal").style.display = "block";
+    }
 
-    // 處理剪貼簿匯入，相容中英文逗號
-    function quickImport() {
-        const val = document.getElementById("aiImport").value.trim();
-        if (!val) return;
-        
-        const lines = val.split('\n').filter(l => l.trim().length > 0);
-        if (lines.length === 1) {
-            const parts = lines[0].split(/[,，]/);
-            if (parts.length >= 4) {
-                document.getElementById("subject").value = parts[0].trim();
-                document.getElementById("unit").value = parts[1].trim();
-                document.getElementById("concept").value = parts[2].trim();
-                document.getElementById("type").value = parts[3].trim();
-            }
+    function closeModal() {
+        document.getElementById("addModal").style.display = "none";
+        // 清空隊列與檔案
+        document.getElementById("multiPhotoInput").value = "";
+        document.getElementById("queueContainer").innerHTML = "";
+        document.getElementById("submitAllBtn").style.display = "none";
+        selectedFilesQueue = [];
+    }
+
+    // 處理多檔選取，產生 UI 隊列
+    function handleFilesSelect(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const container = document.getElementById("queueContainer");
+        const submitBtn = document.getElementById("submitAllBtn");
+
+        files.forEach((file, index) => {
+            const queueId = Date.now() + index; // 產生唯一ID
+            selectedFilesQueue.push({ id: queueId, file: file });
+
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "queue-item";
+            itemDiv.id = `queue-${queueId}`;
+
+            // 產生圖片預覽網址
+            const previewUrl = URL.createObjectURL(file);
+
+            itemDiv.innerHTML = `
+                <div class="queue-img-wrap">
+                    <img src="${previewUrl}" class="queue-img-preview" alt="預覽圖">
+                    <label style="font-size:12px; margin:0; text-align:center;">選擇詳解照(選填)</label>
+                    <input type="file" id="exp-${queueId}" accept="image/*" style="font-size:11px; width:100%;">
+                </div>
+                <div class="queue-inputs">
+                    <label>這張照片的 AI 解析結果 (支援多行一圖多拆)：</label>
+                    <textarea id="ai-${queueId}" placeholder="格式：科目,單元,核心觀念,題型,備註&#10;英文,綜合測驗,主謂一致,單選題,第2題"></textarea>
+                    <input type="text" id="note-${queueId}" placeholder="手動備註 (選填，例如：寫在講義第12頁)">
+                    <button class="delete-btn" style="align-self:flex-end; margin-top:5px;" onclick="removeQueueItem(${queueId})">移除此圖</button>
+                </div>
+            `;
+            container.appendChild(itemDiv);
+        });
+
+        submitBtn.style.display = "block";
+        e.target.value = ""; // 清空 input 讓使用者可再次選擇相同檔案
+    }
+
+    function removeQueueItem(id) {
+        document.getElementById(`queue-${id}`).remove();
+        selectedFilesQueue = selectedFilesQueue.filter(item => item.id !== id);
+        if (selectedFilesQueue.length === 0) {
+            document.getElementById("submitAllBtn").style.display = "none";
         }
     }
 
-    // 圖片前置壓縮處理 (限制最大寬高 1000px，品質 0.7)
+    // 壓縮圖片
     function compressImage(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -461,138 +542,111 @@
                     canvas.height = height;
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(img, 0, 0, width, height);
-                    
-                    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-                    resolve(dataUrl);
+                    resolve(canvas.toDataURL("image/jpeg", 0.7));
                 };
             };
         });
     }
 
-    // 儲存或批次拆分錯題到 Firestore
-    async function saveQuestion(e) {
-        e.preventDefault();
-        const submitBtn = document.getElementById("submitBtn");
-        const fileInput = document.getElementById("photoInput");
-        const expFileInput = document.getElementById("explanationPhotoInput");
+    // 處理整個隊列的儲存邏輯
+    async function saveAllQuestions() {
+        if (selectedFilesQueue.length === 0) return;
 
-        if (!fileInput.files || fileInput.files.length === 0) {
-            alert("請選擇題目圖片！");
-            return;
-        }
-
-        const importVal = document.getElementById("aiImport").value.trim();
-        const lines = importVal.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-        // 如果是單題手動模式，驗證表單是否填寫
-        if (lines.length <= 1) {
-            const subject = document.getElementById("subject").value;
-            const unit = document.getElementById("unit").value;
-            const concept = document.getElementById("concept").value;
-            const type = document.getElementById("type").value;
-            if (!subject || !unit || !concept || !type) {
-                alert("請填寫完整的科目、單元、核心觀念與題型！");
-                return;
-            }
-        }
-
+        const submitBtn = document.getElementById("submitAllBtn");
         submitBtn.disabled = true;
-        submitBtn.innerText = "正在壓縮並上傳雲端...";
+        submitBtn.innerText = "正在壓縮並批次上傳中...";
 
         try {
-            // 壓縮題目照片
-            const file = fileInput.files[0];
-            const compressedBase64 = await compressImage(file);
-
-            // 壓縮詳解照片 (選填)
-            let expBase64 = null;
-            if (expFileInput.files && expFileInput.files.length > 0) {
-                expBase64 = await compressImage(expFileInput.files[0]);
-            }
-
-            const notesText = document.getElementById("notes").value.trim();
-
-            // 批次寫入 Firestore 
             const batch = db.batch();
-            
-            if (lines.length > 1) {
-                let successCount = 0;
+            let successCount = 0;
+            const nowTimestamp = Date.now(); // 確保同一批次時間戳記可做題組連動
+
+            for (let i = 0; i < selectedFilesQueue.length; i++) {
+                const qItem = selectedFilesQueue[i];
+                const aiText = document.getElementById(`ai-${qItem.id}`).value.trim();
+                const manualNote = document.getElementById(`note-${qItem.id}`).value.trim();
+                const expFileInput = document.getElementById(`exp-${qItem.id}`);
+
+                if (!aiText) continue; // 若沒填寫解析則跳過該圖
+
+                // 壓縮主照片
+                const compressedBase64 = await compressImage(qItem.file);
+                
+                // 壓縮詳解照片 (若有)
+                let expBase64 = null;
+                if (expFileInput.files && expFileInput.files.length > 0) {
+                    expBase64 = await compressImage(expFileInput.files[0]);
+                }
+
+                // 處理 AI 多行解析 (一圖多拆)
+                const lines = aiText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                
                 lines.forEach(line => {
                     const parts = line.split(/[,，]/);
                     if (parts.length >= 4) {
+                        let finalNotes = parts[4] ? parts[4].trim() : "";
+                        if (manualNote) {
+                            finalNotes = finalNotes ? `${manualNote} (${finalNotes})` : manualNote;
+                        }
+
                         const question = {
                             subject: parts[0].trim(),
                             unit: parts[1].trim(),
                             concept: parts[2].trim(),
                             type: parts[3].trim(),
-                            image: compressedBase64, // 共用同一張壓縮後的題目照片
-                            explanationImage: expBase64, // 共用同張詳解
-                            notes: notesText,
+                            image: compressedBase64,
+                            explanationImage: expBase64,
+                            notes: finalNotes,
                             reviewCount: 0,
-                            timestamp: Date.now()
+                            timestamp: nowTimestamp
                         };
                         const docRef = db.collection("questions").doc();
                         batch.set(docRef, question);
                         successCount++;
                     }
                 });
-                
-                if (successCount > 0) {
-                    await batch.commit();
-                    alert(`成功一鍵拆分，匯入 ${successCount} 題錯題！`);
-                } else {
-                    throw new Error("匯入內容格式不符。");
-                }
-            } else {
-                // 單題模式
-                const question = {
-                    subject: document.getElementById("subject").value,
-                    unit: document.getElementById("unit").value,
-                    concept: document.getElementById("concept").value,
-                    type: document.getElementById("type").value,
-                    image: compressedBase64,
-                    explanationImage: expBase64,
-                    notes: notesText,
-                    reviewCount: 0,
-                    timestamp: Date.now()
-                };
-                await db.collection("questions").add(question);
-                alert("雲端儲存成功！");
             }
 
-            document.getElementById("wrongQuestionForm").reset();
-            document.getElementById("aiImport").value = "";
+            if (successCount > 0) {
+                await batch.commit();
+                alert(`上傳成功！共處理了 ${successCount} 題錯題。`);
+                closeModal(); // 關閉並清空
+            } else {
+                alert("沒有偵測到任何有效的解析格式，請檢查輸入內容！");
+            }
         } catch (err) {
             alert("上傳失敗：" + err.message);
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerText = "儲存此錯題";
+            submitBtn.innerText = "全部儲存並上傳";
         }
     }
 
-    // 複習次數 +1 (Firestore 更新)
+    /* --- 既有邏輯區 --- */
     async function incrementReview(id) {
         try {
             const docRef = db.collection("questions").doc(id);
             const doc = await docRef.get();
-            const currentCount = doc.data().reviewCount || 0;
-            await docRef.update({ reviewCount: currentCount + 1 });
-        } catch (err) {
-            console.error("更新複習次數失敗:", err);
-        }
+            await docRef.update({ reviewCount: (doc.data().reviewCount || 0) + 1 });
+        } catch (err) { console.error(err); }
     }
 
-    // 刪除錯題
-    async function deleteQuestion(id) {
-        if (!confirm("確定要刪除這筆錯題嗎？刪除後無法恢復。")) return;
+    async function incrementGroupReview(timestamp) {
         try {
-            await db.collection("questions").doc(id).delete();
-        } catch (err) {
-            alert("刪除失敗：" + err.message);
-        }
+            const snapshot = await db.collection("questions").where("timestamp", "==", timestamp).get();
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.update(db.collection("questions").doc(doc.id), { reviewCount: (doc.data().reviewCount || 0) + 1 });
+            });
+            await batch.commit();
+        } catch (err) { console.error(err); }
     }
 
-    // 摺疊/展開詳解控制
+    async function deleteQuestion(id) {
+        if (!confirm("確定要刪除這筆錯題嗎？")) return;
+        try { await db.collection("questions").doc(id).delete(); } catch (err) { alert(err.message); }
+    }
+
     window.toggleExplanation = function(id) {
         const box = document.getElementById(`exp-${id}`);
         const btn = document.getElementById(`btn-exp-${id}`);
@@ -605,51 +659,46 @@
         }
     }
 
-    // 動態產生專屬 AI 提示詞
     function updateAIPrompt(items) {
         const unitSet = new Set();
-        items.forEach(item => {
-            if (item.unit) unitSet.add(item.unit);
-        });
-        
+        items.forEach(item => { if (item.unit) unitSet.add(item.unit); });
         let unitString = Array.from(unitSet).join("、");
-        if (!unitString) unitString = "目前無既有單元，請依題目自行判斷";
+        if (!unitString) unitString = "無既有單元，請依題目判斷";
 
-        const promptTemplate = `這是一張考題照片。裡面可能包含單一題目或一整組題目（例如綜合測驗、題組）。
-請幫我分析這張照片中「我寫錯或有手寫標記」的所有題目。
+        // 微調提示詞，讓 AI 知道可能會有「多張照片」
+        const promptTemplate = `這是一組（或單張）考題照片。請分析照片中「我寫錯或有手寫痕跡」的所有題目。
+請針對「每一道題」單獨輸出一行，並按照以下 5 個欄位格式輸出（用半形逗號隔開），絕對不要有任何引言或 markdown：
 
-請針對「每一道題」單獨輸出一行，格式如下（用半形逗號隔開），絕對不要有任何額外解釋、題號符號、引言或 markdown 標籤：
+科目,單元名稱,核心觀念,題型,題號備註
 
-科目,單元名稱-第X題,核心觀念,題型
+【關鍵要求】
+* 欄位 1 (科目)：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
+* 欄位 2 (單元名稱)：必須是真實的知識點大類！既有單元：[ ${unitString} ]
+* 欄位 3 (核心觀念)：精準核心考點（例如：同位語、動量守恆）。
+* 欄位 4 (題型)：[單選題, 多選題, 非選擇題]
+* 欄位 5 (題號備註)：寫「第X題」。
 
 【範例輸出】
-英文,綜合測驗-第2題,主謂一致(the number of),單選題
-英文,綜合測驗-第5題,動詞搭配(exercise talents),單選題
-
-【分類限制規範（請優先從以下既有清單中選擇，若完全不符合再幫我建立新的）】
-* 科目：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
-* 單元名稱（既有）：[ ${unitString} ]
-* 題型：[單選題, 多選題, 非選擇題]`;
+英文,綜合測驗,主謂一致,單選題,第2題
+物理,力學,牛頓第二定律,單選題,第5題`;
 
         document.getElementById("aiPromptText").value = promptTemplate;
     }
 
-    // 複製提示詞
     function copyPrompt() {
-        const textToCopy = document.getElementById("aiPromptText").value;
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            alert("指令已複製！請直接貼給 AI 進行分析。");
-        }).catch(err => {
-            alert("複製失敗，請手動框選複製。");
+        navigator.clipboard.writeText(document.getElementById("aiPromptText").value).then(() => {
+            alert("指令已複製！請貼給 AI。");
         });
     }
 
-    // 渲染卡片與繪製圖表
     function processAndRender(items, filterSub, sortOrder) {
         const listContainer = document.getElementById("questionsList");
         listContainer.innerHTML = "";
         
         let filteredItems = items.filter(item => filterSub === "全部" || item.subject === filterSub);
+
+        const timestampCounts = {};
+        filteredItems.forEach(item => { timestampCounts[item.timestamp] = (timestampCounts[item.timestamp] || 0) + 1; });
 
         filteredItems.sort((a, b) => {
             if (sortOrder === "newest") return b.timestamp - a.timestamp;
@@ -663,6 +712,7 @@
             const dateStr = new Date(item.timestamp).toLocaleDateString('zh-TW');
             const hasNotes = item.notes && item.notes.trim().length > 0;
             const hasExplanation = item.explanationImage && item.explanationImage.trim().length > 0;
+            const isGroup = timestampCounts[item.timestamp] > 1;
 
             const card = document.createElement("div");
             card.className = "question-card";
@@ -672,10 +722,12 @@
                 </div>
                 <div class="question-details">
                     <div>
-                        <span class="tag tag-subject">${item.subject}</span>
-                        <span class="tag tag-type">${item.type}</span>
-                        <span class="tag tag-review">複習 ${item.reviewCount} 次</span>
-                        <span class="tag tag-date">${dateStr}</span>
+                        <div class="card-meta-line">
+                            <span class="tag-subject">${item.subject}</span>
+                            <span class="meta-gray-text">${item.type}</span>
+                            <span class="meta-gray-text">已複習 ${item.reviewCount} 次</span>
+                            <span class="meta-gray-text" style="margin-left: auto;">${dateStr}</span>
+                        </div>
                         
                         <div class="concept-text">
                             <strong>單元：</strong>${item.unit}<br>
@@ -695,7 +747,8 @@
                     </div>
                     <div class="card-actions">
                         <button class="btn-review" onclick="incrementReview('${item.id}')">已複習 +1</button>
-                        <button class="delete-btn" onclick="deleteQuestion('${item.id}')">刪除此題</button>
+                        ${isGroup ? `<button class="btn-review btn-group-review" onclick="incrementGroupReview(${item.timestamp})">同組 +1</button>` : ''}
+                        <button class="delete-btn" onclick="deleteQuestion('${item.id}')">刪除</button>
                     </div>
                 </div>
             `;
@@ -704,105 +757,71 @@
 
         const stats = {};
         if (filterSub === "全部") {
-            items.forEach(item => {
-                stats[item.subject] = (stats[item.subject] || 0) + 1;
-            });
+            items.forEach(item => { stats[item.subject] = (stats[item.subject] || 0) + 1; });
         } else {
             filteredItems.forEach(item => {
-                const key = item.unit || "未指定";
+                const key = item.concept || "未分類觀念";
                 stats[key] = (stats[key] || 0) + 1;
             });
         }
 
-        const sortedStats = Object.entries(stats)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-
-        const labels = sortedStats.map(x => x[0]);
-        const values = sortedStats.map(x => x[1]);
-
-        drawRadarChart(labels, values, filterSub);
+        const sortedStats = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+        drawHorizontalBarChart(sortedStats, filterSub);
     }
 
-    // 離線雷達圖繪製 (Canvas)
-    function drawRadarChart(labels, values, filterSub) {
-        const canvas = document.getElementById("radarChart");
+    function drawHorizontalBarChart(data, filterSub) {
+        const canvas = document.getElementById("weaknessChart");
         const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const cx = canvas.width / 2;
-        const cy = canvas.height / 2 + 10;
-        const r = 100; 
-        const N = labels.length;
-
-        if (N < 3) {
+        
+        if (data.length === 0) {
+            canvas.height = 120;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#888";
-            ctx.font = "13px sans-serif";
+            ctx.font = "14px sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("累積至少 3 個不同類別的數據後", cx, cy - 10);
-            ctx.fillText("將自動繪製弱點雷達圖", cx, cy + 10);
+            ctx.fillText("尚無錯題數據，無法繪製弱點圖表", canvas.width / 2, 60);
             return;
         }
 
-        const maxValue = Math.max(...values, 1);
+        const rowHeight = 35; 
+        const headerHeight = 40;
+        const footerHeight = 20;
+        canvas.height = data.length * rowHeight + headerHeight + footerHeight;
 
-        ctx.strokeStyle = "#333333";
-        ctx.lineWidth = 1;
-        for (let j = 1; j <= 4; j++) {
-            const scale = j / 4;
-            ctx.beginPath();
-            for (let i = 0; i < N; i++) {
-                const angle = i * (2 * Math.PI / N) - Math.PI / 2;
-                const x = cx + r * scale * Math.cos(angle);
-                const y = cy + r * scale * Math.sin(angle);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.stroke();
-        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = "#444444";
-        for (let i = 0; i < N; i++) {
-            const angle = i * (2 * Math.PI / N) - Math.PI / 2;
-            const x = cx + r * Math.cos(angle);
-            const y = cy + r * Math.sin(angle);
-
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(x, y);
-            ctx.stroke();
-
-            const labelX = cx + (r + 20) * Math.cos(angle);
-            const labelY = cy + (r + 15) * Math.sin(angle);
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "12px sans-serif";
-            ctx.textAlign = Math.cos(angle) > 0.1 ? "left" : (Math.cos(angle) < -0.1 ? "right" : "center");
-            ctx.textBaseline = "middle";
-            ctx.fillText(`${labels[i]} (${values[i]}題)`, labelX, labelY);
-        }
-
-        ctx.strokeStyle = "rgba(229, 115, 115, 0.8)";
-        ctx.fillStyle = "rgba(229, 115, 115, 0.25)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 0; i < N; i++) {
-            const angle = i * (2 * Math.PI / N) - Math.PI / 2;
-            const valScale = values[i] / maxValue;
-            const x = cx + r * valScale * Math.cos(angle);
-            const y = cy + r * valScale * Math.sin(angle);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        const leftMargin = 150; 
+        const rightMargin = 50; 
+        const chartWidth = canvas.width - leftMargin - rightMargin;
+        const maxVal = Math.max(...data.map(x => x[1]), 1);
 
         ctx.fillStyle = "#888888";
-        ctx.font = "12px sans-serif";
+        ctx.font = "bold 13px sans-serif";
         ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillText(filterSub === "全部" ? "【跨科目弱點分析 (Top 5)】" : `【${filterSub} - 單元弱點分析 (Top 5)】`, 10, 10);
+        ctx.fillText(filterSub === "全部" ? "【跨科目錯題弱點分佈】" : `【${filterSub} - 核心觀念排行】`, 10, 25);
+
+        data.forEach(([label, count], i) => {
+            const y = headerHeight + i * rowHeight;
+            const barWidth = (count / maxVal) * chartWidth;
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "12px sans-serif";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            const displayLabel = label.length > 14 ? label.slice(0, 12) + "..." : label;
+            ctx.fillText(displayLabel, leftMargin - 15, y + 12);
+
+            ctx.fillStyle = "#222222";
+            ctx.fillRect(leftMargin, y, chartWidth, 18);
+
+            ctx.fillStyle = "rgba(229, 115, 115, 0.9)";
+            ctx.fillRect(leftMargin, y, barWidth, 18);
+
+            ctx.fillStyle = "#e57373";
+            ctx.font = "bold 11px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(`${count} 題`, leftMargin + barWidth + 8, y + 10);
+        });
     }
 </script>
 
