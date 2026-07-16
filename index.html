@@ -29,7 +29,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -43,7 +43,6 @@
             margin-bottom: 5px;
         }
 
-        /* 主畫面新增按鈕 */
         .btn-main-add {
             width: 100%;
             max-width: 400px;
@@ -105,16 +104,14 @@
             max-width: 100%;
         }
 
+        /* 自適應緊湊網格：一行多圖相片牆 */
         .questions-list {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
         }
 
-        @media (min-width: 850px) {
-            .questions-list { grid-template-columns: 1fr 1fr; }
-        }
-
+        /* 卡片大瘦身 */
         .question-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -122,25 +119,35 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            user-select: none;
         }
 
+        /* 隱形多選藍框狀態 */
+        .question-card.selected {
+            border: 2px solid var(--accent-color) !important;
+            box-shadow: 0 0 12px rgba(63, 81, 181, 0.6);
+        }
+
+        /* 主頁圖片縮圖限制高度 */
         .question-img-container {
             width: 100%;
+            height: 120px; 
             background-color: #000;
-            text-align: center;
+            overflow: hidden;
             position: relative;
         }
 
         .question-img {
-            max-width: 100%;
-            max-height: 250px;
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
             display: block;
-            margin: 0 auto;
         }
 
         .question-details {
-            padding: 12px 15px;
+            padding: 10px 12px;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
@@ -151,7 +158,7 @@
             display: flex;
             align-items: center;
             flex-wrap: wrap;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .tag-subject {
@@ -165,71 +172,223 @@
         }
 
         .meta-gray-text {
-            font-size: 12px;
+            font-size: 11px;
             color: #888;
-            margin-right: 10px;
+            margin-right: 8px;
         }
 
         .concept-text {
-            font-size: 14px;
-            margin: 4px 0 8px 0;
+            font-size: 13px;
+            margin: 2px 0 6px 0;
             color: #fff;
-            line-height: 1.4;
+            line-height: 1.3;
         }
 
         .notes-box {
-            font-size: 13px;
+            font-size: 12px;
             color: #b0b0b0;
             background-color: #262626;
-            padding: 6px 10px;
+            padding: 4px 8px;
             border-radius: 4px;
-            margin-top: 5px;
+            margin-top: 3px;
             border-left: 3px solid var(--accent-color);
             word-break: break-all;
         }
 
         .explanation-section {
-            margin-top: 8px;
+            margin-top: 6px;
             border-top: 1px solid #2a2a2a;
-            padding-top: 8px;
+            padding-top: 6px;
         }
 
-        .btn-toggle-exp, .btn-review, .btn-group-review, .delete-btn {
+        .btn-toggle-exp {
+            background-color: #333;
+            color: #ddd;
+            padding: 4px;
+            font-size: 11px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
         }
-
-        .btn-toggle-exp { background-color: #333; color: #ddd; padding: 5px; font-size: 12px; margin: 2px 0; }
         .btn-toggle-exp:hover { background-color: #444; }
         
-        .explanation-img-box { display: none; margin-top: 8px; background-color: #000; border-radius: 4px; overflow: hidden; }
+        .explanation-img-box { display: none; margin-top: 6px; background-color: #000; border-radius: 4px; overflow: hidden; }
 
-        .card-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-start;
-            align-items: center;
-            margin-top: 12px;
+        .card-actions-placeholder { display: none; }
+
+        /* --- 劇院級圖片檢視器 Modal 樣式 --- */
+        .viewer-modal {
+            display: none; 
+            position: fixed; 
+            z-index: 2000; 
+            left: 0; top: 0; width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.95); 
+            backdrop-filter: blur(5px);
         }
 
-        .btn-review { background-color: var(--warning-color); color: #000; padding: 5px 10px; font-size: 12px; font-weight:bold; }
-        .btn-review:hover { background-color: #fb8c00; }
-        .btn-group-review { background-color: var(--success-color); color: #fff; }
-        .btn-group-review:hover { background-color: #45a049; }
-        
-        .delete-btn { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); padding: 4px 8px; font-size: 11px; margin-left: auto; }
-        .delete-btn:hover { background-color: rgba(229, 115, 115, 0.1); }
+        .viewer-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
 
-        /* --- Modal (彈出視窗) 樣式修正 --- */
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: #111;
+            z-index: 2200;
+        }
+
+        .viewer-tools button {
+            background: #333; color: #fff; border: 1px solid #555; border-radius: 20px;
+            padding: 6px 15px; margin-right: 8px; cursor: pointer; font-size: 13px;
+        }
+        .viewer-tools button:hover { background: #555; }
+
+        .close-viewer {
+            color: #fff; font-size: 30px; cursor: pointer; font-weight: bold;
+        }
+
+        .viewer-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0,0,0,0.6);
+            color: #fff;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            z-index: 2100;
+        }
+        .viewer-nav-btn:hover { background-color: rgba(255,255,255,0.25); }
+        .viewer-prev-btn { left: 20px; }
+        .viewer-next-btn { right: 20px; }
+
+        @media (max-width: 600px) {
+            .viewer-nav-btn { display: none; } 
+        }
+
+        .viewer-img-container {
+            flex-grow: 1;
+            overflow: auto;
+            text-align: center;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #viewerImage {
+            max-width: 100%;
+            max-height: 68vh;
+            object-fit: contain;
+            transition: transform 0.2s ease-out;
+            transform-origin: center center;
+        }
+
+        .viewer-metadata {
+            background: #1a1a1a;
+            padding: 15px 20px;
+            border-top: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 2200;
+        }
+
+        .viewer-action-line {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+            flex-wrap: wrap;
+        }
+        .viewer-action-line button {
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .viewer-btn-review { background-color: var(--warning-color); color: #000; }
+        .viewer-btn-review:hover { background-color: #fb8c00; }
+        .viewer-btn-group-review { background-color: var(--success-color); color: #fff; }
+        .viewer-btn-group-review:hover { background-color: #45a049; }
+        .viewer-btn-delete { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color) !important; margin-left: auto; }
+        .viewer-btn-delete:hover { background-color: rgba(229, 115, 115, 0.1); }
+
+        /* --- 批量操作浮動工具列 --- */
+        .batch-floating-bar {
+            position: fixed;
+            bottom: -80px; 
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(26, 26, 26, 0.95);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            z-index: 1500;
+            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        .batch-floating-bar.active {
+            bottom: 25px;
+            pointer-events: auto;
+        }
+        .batch-floating-bar span {
+            font-size: 14px;
+            color: #fff;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .batch-floating-bar button {
+            background-color: var(--warning-color);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            width: auto;
+            margin-top: 0;
+        }
+        .batch-floating-bar button:hover { background-color: #fb8c00; }
+        .batch-floating-bar .btn-batch-delete {
+            background-color: transparent;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+        .batch-floating-bar .btn-batch-delete:hover { background-color: rgba(229, 115, 115, 0.1); }
+
+        /* --- 上傳與隊列 Modal 樣式 --- */
         .modal {
             display: none; 
             position: fixed; 
             z-index: 1000; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            height: 100%; 
+            left: 0; top: 0; width: 100%; height: 100%; 
             background-color: rgba(0,0,0,0.85); 
             overflow-y: auto;
             backdrop-filter: blur(5px);
@@ -244,121 +403,53 @@
             max-width: 900px;
             border-radius: 12px;
             position: relative;
-            box-sizing: border-box; /* 確保 padding 不會撐破視窗 */
+            box-sizing: border-box; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .close-modal {
-            position: absolute;
-            right: 20px;
-            top: 15px;
-            color: #888;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
+            position: absolute; right: 20px; top: 15px; color: #888; font-size: 28px; font-weight: bold; cursor: pointer;
         }
         .close-modal:hover { color: #fff; }
 
         .modal h2 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 
         .prompt-box {
-            background-color: #1a1a1a;
-            border: 1px dashed var(--success-color);
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
+            background-color: #1a1a1a; border: 1px dashed var(--success-color); padding: 15px; border-radius: 6px; margin-bottom: 20px; box-sizing: border-box;
         }
-        
         .prompt-box textarea { width: 100%; background: #111; color: #888; border: 1px solid #333; padding: 8px; font-size: 12px; box-sizing:border-box; border-radius:4px; }
         .btn-copy { width: 100%; padding: 8px; background: var(--success-color); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 8px; }
 
-        /* 上傳隊列樣式手機版防呆 */
+        .import-box {
+            background-color: #252525; border: 1px dashed var(--accent-color); padding: 15px; border-radius: 6px; margin-bottom: 20px; box-sizing: border-box;
+        }
+        .import-box textarea { width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 8px; font-size: 13px; box-sizing:border-box; border-radius:4px; }
+
         .upload-trigger {
-            display: block;
-            width: 100%;
-            box-sizing: border-box;
-            background: #252525;
-            border: 2px dashed var(--accent-color);
-            padding: 20px 10px;
-            text-align: center;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            transition: background 0.2s;
+            display: block; width: 100%; box-sizing: border-box; background: #252525; border: 2px dashed var(--accent-color); padding: 20px 10px; text-align: center; border-radius: 8px; cursor: pointer; margin-bottom: 20px; transition: background 0.2s;
         }
         .upload-trigger:hover { background: #2a2a2a; }
         .upload-trigger input { display: none; }
 
         .queue-item {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            background: var(--card-bg);
-            padding: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 15px;
-            box-sizing: border-box;
+            display: flex; flex-direction: column; gap: 15px; background: var(--card-bg); padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 15px; box-sizing: border-box;
         }
 
-        @media (min-width: 600px) {
-            .queue-item { flex-direction: row; }
-        }
-
-        /* 手機版 (小螢幕) 響應式微調 */
+        @media (min-width: 600px) { .queue-item { flex-direction: row; } }
         @media (max-width: 600px) {
-            .modal-content {
-                margin: 20px auto;
-                padding: 15px;
-                width: 98%;
-            }
-            .upload-trigger span {
-                font-size: 14px !important;
-            }
+            .modal-content { margin: 20px auto; padding: 15px; width: 98%; }
+            .upload-trigger span { font-size: 14px !important; }
         }
 
-        .queue-img-wrap {
-            width: 100%;
-            max-width: 200px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .queue-img-preview {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            background: #000;
-            border-radius: 6px;
-            border: 1px solid #444;
-        }
-
-        .queue-inputs {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
+        .queue-img-wrap { width: 100%; max-width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+        .queue-img-preview { width: 100%; height: 150px; object-fit: cover; background: #000; border-radius: 6px; border: 1px solid #444; }
+        .queue-inputs { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
         .queue-inputs label { margin-top: 0; font-size: 13px; color: #aaa; }
         .queue-inputs textarea, .queue-inputs input { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box; }
         .queue-inputs textarea { height: 90px; resize: vertical; }
 
         .btn-submit-all {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            box-sizing: border-box;
+            width: 100%; padding: 15px; background-color: var(--accent-color); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; box-sizing: border-box;
         }
         .btn-submit-all:disabled { background-color: #555; cursor: not-allowed; }
 
@@ -375,7 +466,7 @@
     <button class="btn-main-add" onclick="openModal()">＋ 新增錯題 (支援多圖批次)</button>
 
     <div class="card">
-        <h3 style="margin-top: 0;">數據篩選 & 弱點排行</h3>
+        <h3 style="margin-top: 0; display: inline-block;">數據篩選 & 弱點排行</h3>
         <div class="filter-group">
             <select id="filterSubject" onchange="loadQuestions()">
                 <option value="全部">全部科目 (查看弱點)</option>
@@ -398,8 +489,8 @@
             </select>
         </div>
         
-        <div class="chart-container">
-            <canvas id="weaknessChart" width="800" height="200"></canvas>
+        <div class="chart-container" id="chartContainer" style="width: 100%;">
+            <canvas id="weaknessChart" style="display: block; width: 100%;"></canvas>
         </div>
     </div>
 
@@ -412,7 +503,7 @@
         <h2>批次新增錯題</h2>
 
         <div class="prompt-box">
-            <label style="color:var(--success-color); font-weight:bold; margin-top:0; display:block;">1. 獲取專屬 AI 指令</label>
+            <label style="color:var(--success-color); font-weight:bold; margin-top:0; display:block;">1. 獲取專屬 AI 指令 (已自動整合雲端既有標籤)</label>
             <textarea id="aiPromptText" rows="3" readonly></textarea>
             <button class="btn-copy" onclick="copyPrompt()">一鍵複製指令給 AI</button>
         </div>
@@ -423,11 +514,41 @@
             <input type="file" id="multiPhotoInput" accept="image/*" multiple onchange="handleFilesSelect(event)">
         </label>
 
-        <div id="queueContainer">
-            </div>
+        <div class="import-box" id="masterImportSection" style="display:none; border-color: var(--success-color);">
+            <label style="color:var(--success-color); font-weight:bold; margin-top:0; display:block; margin-bottom: 5px;">3. 貼入所有照片的 AI 解析 (網頁會自動辨識並分配)</label>
+            <textarea id="masterAiImport" rows="5" placeholder="把 AI 給你的整串解析直接整段貼在這裡，程式會自動依照 [照片X] 派發到下方的各張考卷中。" oninput="distributeMasterAi()"></textarea>
+        </div>
+
+        <div id="queueContainer"></div>
 
         <button id="submitAllBtn" class="btn-submit-all" style="display:none;" onclick="saveAllQuestions()">全部儲存並上傳</button>
     </div>
+</div>
+
+<div id="imageViewerModal" class="viewer-modal">
+    <button class="viewer-nav-btn viewer-prev-btn" onclick="navigateViewer(-1)">＜</button>
+    <button class="viewer-nav-btn viewer-next-btn" onclick="navigateViewer(1)">＞</button>
+
+    <div class="viewer-content">
+        <div class="viewer-header">
+            <div class="viewer-tools">
+                <button onclick="zoomImage(0.3)">放大 ＋</button>
+                <button onclick="zoomImage(-0.3)">縮小 －</button>
+                <button onclick="resetZoom()">重設比例</button>
+            </div>
+            <span class="close-viewer" onclick="closeImageViewer()">&times;</span>
+        </div>
+        <div class="viewer-img-container" id="viewerImgContainer">
+            <img id="viewerImage" src="" alt="放大圖片">
+        </div>
+        <div class="viewer-metadata" id="viewerMetadata"></div>
+    </div>
+</div>
+
+<div class="batch-floating-bar" id="batchFloatingBar">
+    <span>已選取 <span id="batchSelectCount" style="color: var(--warning-color);">0</span> 題</span>
+    <button onclick="batchIncrementReview()">批量複習 +1</button>
+    <button class="btn-batch-delete" onclick="batchDelete()">批量刪除</button>
 </div>
 
 <script>
@@ -444,15 +565,30 @@
     const db = firebase.firestore();
 
     let unsubscribe = null;
-    let selectedFilesQueue = []; // 儲存使用者選取的圖片檔案
+    let selectedFilesQueue = []; 
+    
+    window.currentItemsMap = {}; 
+    let filteredSortedItems = []; 
+    let currentViewerId = null;
+    let currentZoom = 1;
+
+    // 隱形選取機制與圖表折疊狀態
+    let selectedCardIds = new Set();
+    let lastSelectedId = null;
+    let pressTimer;
+    let chartExpanded = false; 
 
     window.onload = function() {
         loadQuestions();
+        window.addEventListener("resize", function() {
+            const filterSubject = document.getElementById("filterSubject").value;
+            triggerChartRebuilt(filterSubject);
+        });
+        setupSwipeGestures();
     };
 
     function loadQuestions() {
         if (unsubscribe) unsubscribe();
-
         const filterSubject = document.getElementById("filterSubject").value;
         const sortOrder = document.getElementById("sortOrder").value;
 
@@ -463,6 +599,7 @@
                 item.id = doc.id;
                 if (typeof item.reviewCount === 'undefined') item.reviewCount = 0;
                 allItems.push(item);
+                window.currentItemsMap[item.id] = item;
             });
             updateAIPrompt(allItems);
             processAndRender(allItems, filterSubject, sortOrder);
@@ -471,49 +608,279 @@
         });
     }
 
-    /* --- Modal 與隊列邏輯 --- */
-    function openModal() {
-        document.getElementById("addModal").style.display = "block";
+    /* --- 劇院級圖片檢視器邏輯 --- */
+    function openImageViewer(id) {
+        currentViewerId = id;
+        resetZoom();
+        renderViewerContent(id);
+        document.getElementById("imageViewerModal").style.display = "block";
     }
 
+    function renderViewerContent(id) {
+        const item = window.currentItemsMap[id];
+        if (!item) return;
+
+        document.getElementById("viewerImage").src = item.image;
+        const isGroup = filteredSortedItems.filter(i => i.timestamp === item.timestamp).length > 1;
+        const dateStr = new Date(item.timestamp).toLocaleDateString('zh-TW');
+
+        const metaHtml = `
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:5px;">
+                <span class="tag-subject">${item.subject}</span>
+                <span style="color:#aaa; font-size:12px;">${item.type}</span>
+                <span style="color:#aaa; font-size:12px;">已複習 ${item.reviewCount} 次</span>
+                <span style="color:#aaa; font-size:12px; margin-left:auto;">${dateStr}</span>
+            </div>
+            <div style="color:#fff; font-size:14px; line-height:1.4;">
+                <strong>單元：</strong>${item.unit} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>觀念：</strong>${item.concept}
+            </div>
+            ${item.notes ? `<div class="notes-box"><strong>備註：</strong>${item.notes}</div>` : ''}
+            
+            <div class="viewer-action-line">
+                <button class="viewer-btn-review" onclick="viewerIncrementReview()">已複習 +1</button>
+                ${isGroup ? `<button class="viewer-btn-review viewer-btn-group-review" onclick="viewerIncrementGroupReview()">同組 +1</button>` : ''}
+                <button class="viewer-btn-delete" onclick="viewerDeleteQuestion()">刪除此題</button>
+            </div>
+        `;
+        document.getElementById("viewerMetadata").innerHTML = metaHtml;
+    }
+
+    function closeImageViewer() {
+        document.getElementById("imageViewerModal").style.display = "none";
+        document.getElementById("viewerImage").src = "";
+    }
+
+    function zoomImage(delta) {
+        currentZoom += delta;
+        if (currentZoom < 0.5) currentZoom = 0.5;
+        if (currentZoom > 5) currentZoom = 5;
+        document.getElementById("viewerImage").style.transform = `scale(${currentZoom})`;
+    }
+
+    function resetZoom() {
+        currentZoom = 1;
+        document.getElementById("viewerImage").style.transform = `scale(1)`;
+    }
+
+    function navigateViewer(direction) {
+        if (filteredSortedItems.length <= 1) return;
+        let idx = filteredSortedItems.findIndex(item => item.id === currentViewerId);
+        if (idx === -1) return;
+
+        let nextIdx = idx + direction;
+        if (nextIdx < 0) nextIdx = filteredSortedItems.length - 1;
+        if (nextIdx >= filteredSortedItems.length) nextIdx = 0;
+
+        openImageViewer(filteredSortedItems[nextIdx].id);
+    }
+
+    function setupSwipeGestures() {
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const container = document.getElementById("viewerImgContainer");
+
+        container.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        container.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            const threshold = 60;
+            if (touchStartX - touchEndX > threshold) navigateViewer(1);
+            else if (touchEndX - touchStartX > threshold) navigateViewer(-1);
+        }, { passive: true });
+    }
+
+    /* --- 劇院內建操作同步優化 --- */
+    async function viewerIncrementReview() {
+        const id = currentViewerId;
+        const item = window.currentItemsMap[id];
+        if (!item) return;
+
+        item.reviewCount = (item.reviewCount || 0) + 1;
+        renderViewerContent(id);
+
+        try {
+            await db.collection("questions").doc(id).update({ reviewCount: item.reviewCount });
+        } catch (err) { console.error(err); }
+    }
+
+    async function viewerIncrementGroupReview() {
+        const id = currentViewerId;
+        const item = window.currentItemsMap[id];
+        if (!item) return;
+
+        const ts = item.timestamp;
+        filteredSortedItems.forEach(i => {
+            if (i.timestamp === ts) i.reviewCount = (i.reviewCount || 0) + 1;
+        });
+        renderViewerContent(id);
+
+        try {
+            const snapshot = await db.collection("questions").where("timestamp", "==", ts).get();
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.update(db.collection("questions").doc(doc.id), { 
+                    reviewCount: firebase.firestore.FieldValue.increment(1) 
+                });
+            });
+            await batch.commit();
+        } catch (err) { console.error(err); }
+    }
+
+    async function viewerDeleteQuestion() {
+        const id = currentViewerId;
+        if (!confirm("確定要刪除這筆錯題嗎？")) return;
+
+        let idx = filteredSortedItems.findIndex(item => item.id === id);
+        let nextId = null;
+        if (filteredSortedItems.length > 1) {
+            nextId = (idx < filteredSortedItems.length - 1) ? filteredSortedItems[idx + 1].id : filteredSortedItems[idx - 1].id;
+        }
+
+        try {
+            await db.collection("questions").doc(id).delete();
+            if (nextId) openImageViewer(nextId);
+            else closeImageViewer();
+        } catch (err) { alert("刪除失敗：" + err.message); }
+    }
+
+    /* --- 無框隱形多選邏輯 --- */
+    function handleCardClick(e, id) {
+        const isSelectionMode = selectedCardIds.size > 0 || e.shiftKey;
+
+        if (isSelectionMode) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.shiftKey && lastSelectedId && lastSelectedId !== id) {
+                const activeIds = filteredSortedItems.map(item => item.id);
+                const startIdx = activeIds.indexOf(lastSelectedId);
+                const endIdx = activeIds.indexOf(id);
+
+                if (startIdx !== -1 && endIdx !== -1) {
+                    const min = Math.min(startIdx, endIdx);
+                    const max = Math.max(startIdx, endIdx);
+                    const targetState = !selectedCardIds.has(id);
+
+                    for (let i = min; i <= max; i++) {
+                        const curId = activeIds[i];
+                        if (targetState) selectedCardIds.add(curId);
+                        else selectedCardIds.delete(curId);
+                    }
+                }
+            } else {
+                if (selectedCardIds.has(id)) selectedCardIds.delete(id);
+                else selectedCardIds.add(id);
+            }
+
+            lastSelectedId = id;
+            updateSelectionUI();
+        } else {
+            openImageViewer(id);
+        }
+    }
+
+    function handleTouchStart(id) {
+        pressTimer = window.setTimeout(() => {
+            if (!selectedCardIds.has(id)) {
+                selectedCardIds.add(id);
+                lastSelectedId = id;
+                updateSelectionUI();
+                if (navigator.vibrate) navigator.vibrate(50);
+            }
+        }, 600);
+    }
+
+    function handleTouchCancel() { window.clearTimeout(pressTimer); }
+
+    function updateSelectionUI() {
+        document.querySelectorAll(".question-card").forEach(card => {
+            const id = card.getAttribute("data-id");
+            if (selectedCardIds.has(id)) card.classList.add("selected");
+            else card.classList.remove("selected");
+        });
+
+        const bar = document.getElementById("batchFloatingBar");
+        const countSpan = document.getElementById("batchSelectCount");
+        if (selectedCardIds.size > 0) {
+            countSpan.innerText = selectedCardIds.size;
+            bar.classList.add("active");
+        } else {
+            bar.classList.remove("active");
+        }
+    }
+
+    async function batchIncrementReview() {
+        if (selectedCardIds.size === 0) return;
+        const batch = db.batch();
+        selectedCardIds.forEach(id => {
+            batch.update(db.collection("questions").doc(id), {
+                reviewCount: firebase.firestore.FieldValue.increment(1)
+            });
+        });
+        try {
+            await batch.commit();
+            selectedCardIds.clear();
+            updateSelectionUI();
+        } catch (err) { alert("批量更新失敗：" + err.message); }
+    }
+
+    async function batchDelete() {
+        if (selectedCardIds.size === 0) return;
+        if (!confirm(`確定要永久刪除這 ${selectedCardIds.size} 題錯題嗎？`)) return;
+
+        const batch = db.batch();
+        selectedCardIds.forEach(id => { batch.delete(db.collection("questions").doc(id)); });
+        try {
+            await batch.commit();
+            selectedCardIds.clear();
+            updateSelectionUI();
+        } catch (err) { alert("批量刪除失敗：" + err.message); }
+    }
+
+    /* --- Modal 與多圖派發上傳隊列 --- */
+    function openModal() { document.getElementById("addModal").style.display = "block"; }
     function closeModal() {
         document.getElementById("addModal").style.display = "none";
-        // 清空隊列與檔案
         document.getElementById("multiPhotoInput").value = "";
         document.getElementById("queueContainer").innerHTML = "";
         document.getElementById("submitAllBtn").style.display = "none";
+        document.getElementById("masterImportSection").style.display = "none";
+        document.getElementById("masterAiImport").value = "";
         selectedFilesQueue = [];
     }
 
-    // 處理多檔選取，產生 UI 隊列
     function handleFilesSelect(e) {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
 
         const container = document.getElementById("queueContainer");
         const submitBtn = document.getElementById("submitAllBtn");
+        const masterImportSection = document.getElementById("masterImportSection");
 
         files.forEach((file, index) => {
-            const queueId = Date.now() + index; // 產生唯一ID
+            const queueId = Date.now() + index; 
             selectedFilesQueue.push({ id: queueId, file: file });
 
             const itemDiv = document.createElement("div");
             itemDiv.className = "queue-item";
             itemDiv.id = `queue-${queueId}`;
 
-            // 產生圖片預覽網址
             const previewUrl = URL.createObjectURL(file);
+            const fileIndexLabel = selectedFilesQueue.length;
 
             itemDiv.innerHTML = `
                 <div class="queue-img-wrap">
+                    <span style="font-size:13px; font-weight:bold; color:var(--warning-color);">第 ${fileIndexLabel} 張照片</span>
                     <img src="${previewUrl}" class="queue-img-preview" alt="預覽圖">
                     <label style="font-size:12px; margin:0; text-align:center;">選擇詳解照(選填)</label>
                     <input type="file" id="exp-${queueId}" accept="image/*" style="font-size:11px; width:100%;">
                 </div>
                 <div class="queue-inputs">
-                    <label>這張照片的 AI 解析結果 (支援多行一圖多拆)：</label>
-                    <textarea id="ai-${queueId}" placeholder="格式：科目,單元,核心觀念,題型,備註&#10;英文,綜合測驗,主謂一致,單選題,第2題"></textarea>
-                    <input type="text" id="note-${queueId}" placeholder="手動備註 (選填，例如：寫在講義第12頁)">
+                    <label>這張照片的 AI 解析結果：</label>
+                    <textarea id="ai-${queueId}" placeholder="格式：科目,單元,核心觀念,題型,備註"></textarea>
+                    <input type="text" id="note-${queueId}" placeholder="手動備註 (選填)">
                     <button class="delete-btn" style="align-self:flex-end; margin-top:5px;" onclick="removeQueueItem(${queueId})">移除此圖</button>
                 </div>
             `;
@@ -521,18 +888,57 @@
         });
 
         submitBtn.style.display = "block";
-        e.target.value = ""; // 清空 input 讓使用者可再次選擇相同檔案
+        masterImportSection.style.display = "block"; 
+        e.target.value = ""; 
     }
 
     function removeQueueItem(id) {
         document.getElementById(`queue-${id}`).remove();
         selectedFilesQueue = selectedFilesQueue.filter(item => item.id !== id);
+        
+        selectedFilesQueue.forEach((item, index) => {
+            const row = document.getElementById(`queue-${item.id}`);
+            if (row) {
+                const span = row.querySelector(".queue-img-wrap span");
+                if (span) span.innerText = `第 ${index + 1} 張照片`;
+            }
+        });
+
         if (selectedFilesQueue.length === 0) {
             document.getElementById("submitAllBtn").style.display = "none";
+            document.getElementById("masterImportSection").style.display = "none";
+        } else {
+            distributeMasterAi();
         }
     }
 
-    // 壓縮圖片
+    function distributeMasterAi() {
+        const masterVal = document.getElementById("masterAiImport").value.trim();
+        selectedFilesQueue.forEach(qItem => {
+            const ta = document.getElementById(`ai-${qItem.id}`);
+            if (ta) ta.value = "";
+        });
+
+        if (!masterVal) return;
+        const photoLinesMap = {};
+        selectedFilesQueue.forEach((_, idx) => { photoLinesMap[idx + 1] = []; });
+
+        const lines = masterVal.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        lines.forEach(line => {
+            const match = line.match(/^(?:\[?\s*照片|Page|Img|圖)?\s*(\d+)\s*\]?[:：\s,，\.]*(.*)$/i);
+            if (match) {
+                const photoNum = parseInt(match[1], 10);
+                const cleanLine = match[2].trim();
+                if (photoLinesMap[photoNum]) photoLinesMap[photoNum].push(cleanLine);
+            }
+        });
+
+        selectedFilesQueue.forEach((qItem, idx) => {
+            const ta = document.getElementById(`ai-${qItem.id}`);
+            if (ta && photoLinesMap[idx + 1]) ta.value = photoLinesMap[idx + 1].join('\n');
+        });
+    }
+
     function compressImage(file) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -543,22 +949,13 @@
                 img.onload = () => {
                     const canvas = document.createElement("canvas");
                     const max_size = 1000; 
-                    let width = img.width;
-                    let height = img.height;
-
+                    let width = img.width; let height = img.height;
                     if (width > height) {
-                        if (width > max_size) {
-                            height *= max_size / width;
-                            width = max_size;
-                        }
+                        if (width > max_size) { height *= max_size / width; width = max_size; }
                     } else {
-                        if (height > max_size) {
-                            width *= max_size / height;
-                            height = max_size;
-                        }
+                        if (height > max_size) { width *= max_size / height; height = max_size; }
                     }
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(img, 0, 0, width, height);
                     resolve(canvas.toDataURL("image/jpeg", 0.7));
@@ -567,10 +964,8 @@
         });
     }
 
-    // 處理整個隊列的儲存邏輯
     async function saveAllQuestions() {
         if (selectedFilesQueue.length === 0) return;
-
         const submitBtn = document.getElementById("submitAllBtn");
         submitBtn.disabled = true;
         submitBtn.innerText = "正在壓縮並批次上傳中...";
@@ -578,7 +973,7 @@
         try {
             const batch = db.batch();
             let successCount = 0;
-            const nowTimestamp = Date.now(); // 確保同一批次時間戳記可做題組連動
+            const nowTimestamp = Date.now(); 
 
             for (let i = 0; i < selectedFilesQueue.length; i++) {
                 const qItem = selectedFilesQueue[i];
@@ -586,27 +981,20 @@
                 const manualNote = document.getElementById(`note-${qItem.id}`).value.trim();
                 const expFileInput = document.getElementById(`exp-${qItem.id}`);
 
-                if (!aiText) continue; // 若沒填寫解析則跳過該圖
-
-                // 壓縮主照片
+                if (!aiText) continue; 
                 const compressedBase64 = await compressImage(qItem.file);
                 
-                // 壓縮詳解照片 (若有)
                 let expBase64 = null;
                 if (expFileInput.files && expFileInput.files.length > 0) {
                     expBase64 = await compressImage(expFileInput.files[0]);
                 }
 
-                // 處理 AI 多行解析 (一圖多拆)
                 const lines = aiText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                
                 lines.forEach(line => {
                     const parts = line.split(/[,，]/);
                     if (parts.length >= 4) {
                         let finalNotes = parts[4] ? parts[4].trim() : "";
-                        if (manualNote) {
-                            finalNotes = finalNotes ? `${manualNote} (${finalNotes})` : manualNote;
-                        }
+                        if (manualNote) finalNotes = finalNotes ? `${manualNote} (${finalNotes})` : manualNote;
 
                         const question = {
                             subject: parts[0].trim(),
@@ -629,77 +1017,34 @@
             if (successCount > 0) {
                 await batch.commit();
                 alert(`上傳成功！共處理了 ${successCount} 題錯題。`);
-                closeModal(); // 關閉並清空
-            } else {
-                alert("沒有偵測到任何有效的解析格式，請檢查輸入內容！");
-            }
-        } catch (err) {
-            alert("上傳失敗：" + err.message);
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = "全部儲存並上傳";
-        }
+                closeModal(); 
+            } else { alert("未偵測到有效格式！"); }
+        } catch (err) { alert("上傳失敗：" + err.message); }
+        finally { submitBtn.disabled = false; submitBtn.innerText = "全部儲存並上傳"; }
     }
 
-    /* --- 既有邏輯區 --- */
-    async function incrementReview(id) {
-        try {
-            const docRef = db.collection("questions").doc(id);
-            const doc = await docRef.get();
-            await docRef.update({ reviewCount: (doc.data().reviewCount || 0) + 1 });
-        } catch (err) { console.error(err); }
-    }
-
-    async function incrementGroupReview(timestamp) {
-        try {
-            const snapshot = await db.collection("questions").where("timestamp", "==", timestamp).get();
-            const batch = db.batch();
-            snapshot.forEach(doc => {
-                batch.update(db.collection("questions").doc(doc.id), { reviewCount: (doc.data().reviewCount || 0) + 1 });
-            });
-            await batch.commit();
-        } catch (err) { console.error(err); }
-    }
-
-    async function deleteQuestion(id) {
-        if (!confirm("確定要刪除這筆錯題嗎？")) return;
-        try { await db.collection("questions").doc(id).delete(); } catch (err) { alert(err.message); }
-    }
-
-    window.toggleExplanation = function(id) {
-        const box = document.getElementById(`exp-${id}`);
-        const btn = document.getElementById(`btn-exp-${id}`);
-        if (box.style.display === "none" || box.style.display === "") {
-            box.style.display = "block";
-            btn.innerText = "隱藏詳解";
-        } else {
-            box.style.display = "none";
-            btn.innerText = "查看詳解";
-        }
-    }
-
+    /* --- AI 指令整合機制 --- */
     function updateAIPrompt(items) {
         const unitSet = new Set();
-        items.forEach(item => { if (item.unit) unitSet.add(item.unit); });
-        let unitString = Array.from(unitSet).join("、");
-        if (!unitString) unitString = "無既有單元，請依題目判斷";
+        const conceptSet = new Set();
+        items.forEach(item => { 
+            if (item.unit) unitSet.add(item.unit); 
+            if (item.concept) conceptSet.add(item.concept);
+        });
+        let unitString = Array.from(unitSet).join("、") || "無既有單元";
+        let conceptString = Array.from(conceptSet).join("、") || "無既有觀念";
 
-        // 微調提示詞，讓 AI 知道可能會有「多張照片」
-        const promptTemplate = `這是一組（或單張）考題照片。請分析照片中「我寫錯或有手寫痕跡」的所有題目。
-請針對「每一道題」單獨輸出一行，並按照以下 5 個欄位格式輸出（用半形逗號隔開），絕對不要有任何引言或 markdown：
+        const promptTemplate = `這是一組考題照片。請分析照片中「我寫錯或有手寫痕跡」的所有題目。
+如果上傳多張照片，請務必在每行開頭加上「[照片X]」（如 [照片1]、[照片2]）。
+請針對「每一道題」單獨輸出一行格式如下（以半形逗號隔開），不要額外解釋或引言：
+[照片X] 科目,單元名稱,核心觀念,題型,題號備註
 
-科目,單元名稱,核心觀念,題型,題號備註
-
-【關鍵要求】
+【限制清單】
 * 欄位 1 (科目)：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
-* 欄位 2 (單元名稱)：必須是真實的知識點大類！既有單元：[ ${unitString} ]
-* 欄位 3 (核心觀念)：精準核心考點（例如：同位語、動量守恆）。
+* 欄位 2 (單元名稱)：優先使用既有單元保持一致 -> [ ${unitString} ]
+* 欄位 3 (核心觀念)：優先使用既有觀念保持一致 -> [ ${conceptString} ]
 * 欄位 4 (題型)：[單選題, 多選題, 非選擇題]
-* 欄位 5 (題號備註)：寫「第X題」。
-
-【範例輸出】
-英文,綜合測驗,主謂一致,單選題,第2題
-物理,力學,牛頓第二定律,單選題,第5題`;
+* 欄位 5 (題號備註)：寫「第X題」。`;
 
         document.getElementById("aiPromptText").value = promptTemplate;
     }
@@ -710,16 +1055,16 @@
         });
     }
 
+    /* --- 介面渲染與排行分析 --- */
     function processAndRender(items, filterSub, sortOrder) {
         const listContainer = document.getElementById("questionsList");
         listContainer.innerHTML = "";
-        
-        let filteredItems = items.filter(item => filterSub === "全部" || item.subject === filterSub);
+        filteredSortedItems = items.filter(item => filterSub === "全部" || item.subject === filterSub);
 
         const timestampCounts = {};
-        filteredItems.forEach(item => { timestampCounts[item.timestamp] = (timestampCounts[item.timestamp] || 0) + 1; });
+        filteredSortedItems.forEach(item => { timestampCounts[item.timestamp] = (timestampCounts[item.timestamp] || 0) + 1; });
 
-        filteredItems.sort((a, b) => {
+        filteredSortedItems.sort((a, b) => {
             if (sortOrder === "newest") return b.timestamp - a.timestamp;
             if (sortOrder === "oldest") return a.timestamp - b.timestamp;
             if (sortOrder === "reviewAsc") return a.reviewCount - b.reviewCount;
@@ -727,7 +1072,7 @@
             return 0;
         });
 
-        filteredItems.forEach(item => {
+        filteredSortedItems.forEach(item => {
             const dateStr = new Date(item.timestamp).toLocaleDateString('zh-TW');
             const hasNotes = item.notes && item.notes.trim().length > 0;
             const hasExplanation = item.explanationImage && item.explanationImage.trim().length > 0;
@@ -735,6 +1080,13 @@
 
             const card = document.createElement("div");
             card.className = "question-card";
+            card.setAttribute("data-id", item.id);
+            
+            card.addEventListener("click", (e) => handleCardClick(e, item.id));
+            card.addEventListener("touchstart", () => handleTouchStart(item.id), { passive: true });
+            card.addEventListener("touchend", handleTouchCancel, { passive: true });
+            card.addEventListener("touchmove", handleTouchCancel, { passive: true });
+
             card.innerHTML = `
                 <div class="question-img-container">
                     <img class="question-img" src="${item.image}" alt="錯題">
@@ -744,103 +1096,134 @@
                         <div class="card-meta-line">
                             <span class="tag-subject">${item.subject}</span>
                             <span class="meta-gray-text">${item.type}</span>
-                            <span class="meta-gray-text">已複習 ${item.reviewCount} 次</span>
+                            <span class="meta-gray-text">複習 ${item.reviewCount} 次</span>
                             <span class="meta-gray-text" style="margin-left: auto;">${dateStr}</span>
                         </div>
-                        
                         <div class="concept-text">
                             <strong>單元：</strong>${item.unit}<br>
                             <strong>觀念：</strong>${item.concept}
                         </div>
-
                         ${hasNotes ? `<div class="notes-box"><strong>備註：</strong>${item.notes}</div>` : ''}
-
                         ${hasExplanation ? `
                             <div class="explanation-section">
-                                <button class="btn-toggle-exp" id="btn-exp-${item.id}" onclick="toggleExplanation('${item.id}')">查看詳解</button>
+                                <button class="btn-toggle-exp" id="btn-exp-${item.id}" onclick="event.stopPropagation(); toggleExplanation('${item.id}')">查看詳解</button>
                                 <div class="explanation-img-box" id="exp-${item.id}">
                                     <img class="question-img" src="${item.explanationImage}" alt="詳解">
                                 </div>
                             </div>
                         ` : ''}
                     </div>
-                    <div class="card-actions">
-                        <button class="btn-review" onclick="incrementReview('${item.id}')">已複習 +1</button>
-                        ${isGroup ? `<button class="btn-review btn-group-review" onclick="incrementGroupReview(${item.timestamp})">同組 +1</button>` : ''}
-                        <button class="delete-btn" onclick="deleteQuestion('${item.id}')">刪除</button>
-                    </div>
                 </div>
             `;
             listContainer.appendChild(card);
         });
 
+        triggerChartRebuilt(filterSub);
+        updateSelectionUI();
+    }
+
+    function triggerChartRebuilt(filterSub) {
+        const items = Object.values(window.currentItemsMap);
+        let filteredItems = items.filter(item => filterSub === "全部" || item.subject === filterSub);
         const stats = {};
         if (filterSub === "全部") {
-            items.forEach(item => { stats[item.subject] = (stats[item.subject] || 0) + 1; });
+            filteredItems.forEach(item => { stats[item.subject] = (stats[item.subject] || 0) + 1; });
         } else {
             filteredItems.forEach(item => {
                 const key = item.concept || "未分類觀念";
                 stats[key] = (stats[key] || 0) + 1;
             });
         }
-
         const sortedStats = Object.entries(stats).sort((a, b) => b[1] - a[1]);
         drawHorizontalBarChart(sortedStats, filterSub);
     }
 
+    function toggleChartExpand() {
+        chartExpanded = !chartExpanded;
+        const filterSubject = document.getElementById("filterSubject").value;
+        triggerChartRebuilt(filterSubject);
+    }
+
+    /* --- 高畫質 & 支援折疊動態長條圖 --- */
     function drawHorizontalBarChart(data, filterSub) {
         const canvas = document.getElementById("weaknessChart");
         const ctx = canvas.getContext("2d");
-        
+        const container = document.getElementById("chartContainer");
+        const logicalWidth = container.clientWidth || 800; 
+
         if (data.length === 0) {
-            canvas.height = 120;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#888";
-            ctx.font = "14px sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText("尚無錯題數據，無法繪製弱點圖表", canvas.width / 2, 60);
+            canvas.style.height = "120px";
+            canvas.width = logicalWidth * window.devicePixelRatio;
+            canvas.height = 120 * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            ctx.clearRect(0, 0, logicalWidth, 120);
+            ctx.fillStyle = "#888"; ctx.font = "14px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("尚無錯題數據，無法繪製弱點圖表", logicalWidth / 2, 60);
+            
+            let toggleBtn = document.getElementById("chartToggleBtn");
+            if (toggleBtn) toggleBtn.style.display = "none";
             return;
+        }
+
+        // 判斷是否執行折疊隱藏
+        let displayData = data;
+        const hasMoreThanFive = data.length > 5;
+        if (hasMoreThanFive && !chartExpanded) {
+            displayData = data.slice(0, 5);
         }
 
         const rowHeight = 35; 
         const headerHeight = 40;
         const footerHeight = 20;
-        canvas.height = data.length * rowHeight + headerHeight + footerHeight;
+        const logicalHeight = displayData.length * rowHeight + headerHeight + footerHeight;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = logicalWidth * dpr;
+        canvas.height = logicalHeight * dpr;
+        canvas.style.width = logicalWidth + "px";
+        canvas.style.height = logicalHeight + "px";
 
-        const leftMargin = 150; 
+        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+
+        const leftMargin = Math.min(150, logicalWidth * 0.35); 
         const rightMargin = 50; 
-        const chartWidth = canvas.width - leftMargin - rightMargin;
+        const chartWidth = logicalWidth - leftMargin - rightMargin;
         const maxVal = Math.max(...data.map(x => x[1]), 1);
 
-        ctx.fillStyle = "#888888";
-        ctx.font = "bold 13px sans-serif";
-        ctx.textAlign = "left";
+        ctx.fillStyle = "#888888"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "left";
         ctx.fillText(filterSub === "全部" ? "【跨科目錯題弱點分佈】" : `【${filterSub} - 核心觀念排行】`, 10, 25);
 
-        data.forEach(([label, count], i) => {
+        displayData.forEach(([label, count], i) => {
             const y = headerHeight + i * rowHeight;
             const barWidth = (count / maxVal) * chartWidth;
 
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "12px sans-serif";
-            ctx.textAlign = "right";
-            ctx.textBaseline = "middle";
-            const displayLabel = label.length > 14 ? label.slice(0, 12) + "..." : label;
+            ctx.fillStyle = "#ffffff"; ctx.font = "12px sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+            const displayLabel = label.length > 12 ? label.slice(0, 10) + "..." : label;
             ctx.fillText(displayLabel, leftMargin - 15, y + 12);
 
-            ctx.fillStyle = "#222222";
-            ctx.fillRect(leftMargin, y, chartWidth, 18);
-
-            ctx.fillStyle = "rgba(229, 115, 115, 0.9)";
-            ctx.fillRect(leftMargin, y, barWidth, 18);
-
-            ctx.fillStyle = "#e57373";
-            ctx.font = "bold 11px sans-serif";
-            ctx.textAlign = "left";
+            ctx.fillStyle = "#222222"; ctx.fillRect(leftMargin, y, chartWidth, 18);
+            ctx.fillStyle = "rgba(229, 115, 115, 0.9)"; ctx.fillRect(leftMargin, y, barWidth, 18);
+            ctx.fillStyle = "#e57373"; ctx.font = "bold 11px sans-serif"; ctx.textAlign = "left";
             ctx.fillText(`${count} 題`, leftMargin + barWidth + 8, y + 10);
         });
+
+        // 動態注入/控制折疊按鈕 UI
+        let toggleBtn = document.getElementById("chartToggleBtn");
+        if (!toggleBtn) {
+            toggleBtn = document.createElement("button");
+            toggleBtn.id = "chartToggleBtn";
+            toggleBtn.style.cssText = "width:auto; margin:10px auto; padding:6px 20px; background:#262626; color:#bbb; border:1px solid #444; border-radius:20px; cursor:pointer; font-size:12px; display:block;";
+            toggleBtn.onclick = toggleChartExpand;
+            canvas.parentNode.appendChild(toggleBtn);
+        }
+
+        if (hasMoreThanFive) {
+            toggleBtn.style.display = "block";
+            toggleBtn.innerText = chartExpanded ? "收起觀念排行 🔼" : `展開查看全部排行 (${data.length}項) 🔽`;
+        } else {
+            toggleBtn.style.display = "none";
+        }
     }
 </script>
 
