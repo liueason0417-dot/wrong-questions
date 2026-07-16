@@ -221,7 +221,7 @@
         .delete-btn { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); padding: 4px 8px; font-size: 11px; margin-left: auto; }
         .delete-btn:hover { background-color: rgba(229, 115, 115, 0.1); }
 
-        /* --- Modal (彈出視窗) 樣式 --- */
+        /* --- Modal (彈出視窗) 樣式修正 --- */
         .modal {
             display: none; 
             position: fixed; 
@@ -244,6 +244,7 @@
             max-width: 900px;
             border-radius: 12px;
             position: relative;
+            box-sizing: border-box; /* 確保 padding 不會撐破視窗 */
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
@@ -266,16 +267,20 @@
             padding: 15px;
             border-radius: 6px;
             margin-bottom: 20px;
+            box-sizing: border-box;
         }
         
         .prompt-box textarea { width: 100%; background: #111; color: #888; border: 1px solid #333; padding: 8px; font-size: 12px; box-sizing:border-box; border-radius:4px; }
         .btn-copy { width: 100%; padding: 8px; background: var(--success-color); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 8px; }
 
-        /* 上傳隊列樣式 */
+        /* 上傳隊列樣式手機版防呆 */
         .upload-trigger {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
             background: #252525;
             border: 2px dashed var(--accent-color);
-            padding: 20px;
+            padding: 20px 10px;
             text-align: center;
             border-radius: 8px;
             cursor: pointer;
@@ -294,10 +299,23 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             margin-bottom: 15px;
+            box-sizing: border-box;
         }
 
         @media (min-width: 600px) {
             .queue-item { flex-direction: row; }
+        }
+
+        /* 手機版 (小螢幕) 響應式微調 */
+        @media (max-width: 600px) {
+            .modal-content {
+                margin: 20px auto;
+                padding: 15px;
+                width: 98%;
+            }
+            .upload-trigger span {
+                font-size: 14px !important;
+            }
         }
 
         .queue-img-wrap {
@@ -340,6 +358,7 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 10px;
+            box-sizing: border-box;
         }
         .btn-submit-all:disabled { background-color: #555; cursor: not-allowed; }
 
@@ -393,12 +412,12 @@
         <h2>批次新增錯題</h2>
 
         <div class="prompt-box">
-            <label style="color:var(--success-color); font-weight:bold; margin-top:0;">1. 獲取專屬 AI 指令</label>
+            <label style="color:var(--success-color); font-weight:bold; margin-top:0; display:block;">1. 獲取專屬 AI 指令</label>
             <textarea id="aiPromptText" rows="3" readonly></textarea>
             <button class="btn-copy" onclick="copyPrompt()">一鍵複製指令給 AI</button>
         </div>
 
-        <label style="font-weight:bold; color:#fff; font-size:15px; margin-bottom:10px;">2. 選擇考卷照片 (可一次多選)</label>
+        <label style="display:block; font-weight:bold; color:#fff; font-size:15px; margin-bottom:10px;">2. 選擇考卷照片 (可一次多選)</label>
         <label class="upload-trigger">
             <span style="font-size:16px; color:#fff;">📁 點擊選取題目照片 (可選多張)</span>
             <input type="file" id="multiPhotoInput" accept="image/*" multiple onchange="handleFilesSelect(event)">
