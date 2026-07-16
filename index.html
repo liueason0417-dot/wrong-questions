@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學測錯題數據庫 (雲端同步版)</title>
+    <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #3f51b5;
+            --accent-hover: #5c6bc0;
+            --border-color: #333333;
+            --danger-color: #e57373;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 850px) {
+            .grid {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 12px;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #b0b0b0;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            background-color: #2c2c2c;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: #555 !important;
+            cursor: not-allowed;
+        }
+
+        .btn-success { background-color: var(--success-color); margin-top: 5px; }
+        .btn-success:hover { background-color: #45a049; }
+
+        .import-box, .prompt-box {
+            background-color: #252525;
+            border: 1px dashed var(--accent-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .prompt-box { border-color: var(--success-color); }
+
+        .filter-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .chart-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        #radarChart {
+            max-width: 100%;
+            background-color: #1a1a1a;
+            border-radius: 6px;
+        }
+
+        .questions-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media (min-width: 1100px) {
+            .questions-list { grid-template-columns: 1fr 1fr; }
+        }
+
+        .question-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .question-img-container {
+            width: 100%;
+            background-color: #000;
+            text-align: center;
+        }
+
+        .question-img {
+            max-width: 100%;
+            max-height: 250px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .question-details {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .tag-subject { background-color: #00796b; color: white; }
+        .tag-type { background-color: #7b1fa2; color: white; }
+        .tag-review { background-color: var(--warning-color); color: #000; }
+
+        .concept-text {
+            font-size: 14px;
+            margin: 8px 0;
+            color: #fff;
+            line-height: 1.4;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .btn-review {
+            background-color: var(--warning-color);
+            color: #000;
+            padding: 6px 12px;
+            margin: 0;
+            width: auto;
+            font-size: 13px;
+        }
+
+        .btn-review:hover { background-color: #fb8c00; }
+
+        .delete-btn {
+            background-color: transparent;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+            padding: 5px 10px;
+            margin: 0;
+            font-size: 12px;
+            width: auto;
+        }
+
+        .delete-btn:hover { background-color: rgba(229, 115, 115, 0.1); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>學測錯題數據庫 (雲端同步版)</h1>
+        <p style="color: #888; margin: 0;">全平台即時同步 · 自動生成專屬 AI 提示詞</p>
+    </header>
+
+    <div class="grid">
+        <div>
+            <div class="card prompt-box">
+                <h3 style="margin-top: 0; color: var(--success-color);">1. 獲取專屬 AI 指令</h3>
+                <textarea id="aiPromptText" rows="4" readonly style="font-size: 12px; color: #888; background: #1a1a1a;"></textarea>
+                <button class="btn-success" onclick="copyPrompt()">一鍵複製指令</button>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0;">2. 匯入與新增錯題</h3>
+                
+                <div class="import-box">
+                    <label style="margin-top:0;">AI 解析結果快速帶入</label>
+                    <input type="text" id="aiImport" placeholder="例: 國文,現代新詩,語境推敲,單選題" oninput="quickImport()">
+                </div>
+
+                <form id="wrongQuestionForm" onsubmit="saveQuestion(event)">
+                    <label>選擇題目照片</label>
+                    <input type="file" id="photoInput" accept="image/*" required>
+
+                    <label>科目</label>
+                    <select id="subject" required>
+                        <option value="">選擇科目</option>
+                        <option value="國文">國文</option>
+                        <option value="英文">英文</option>
+                        <option value="數學">數學</option>
+                        <option value="物理">物理</option>
+                        <option value="化學">化學</option>
+                        <option value="生物">生物</option>
+                        <option value="地科">地科</option>
+                        <option value="歷史">歷史</option>
+                        <option value="地理">地理</option>
+                        <option value="公民">公民</option>
+                    </select>
+
+                    <label>單元</label>
+                    <input type="text" id="unit" placeholder="例如：現代新詩" required>
+
+                    <label>核心觀念</label>
+                    <input type="text" id="concept" placeholder="例如：詩意語境推敲" required>
+
+                    <label>題型</label>
+                    <select id="type" required>
+                        <option value="單選題">單選題</option>
+                        <option value="多選題">多選題</option>
+                        <option value="非選擇題">非選擇題</option>
+                    </select>
+
+                    <button type="submit" id="submitBtn">儲存此錯題</button>
+                </form>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3 style="margin-top: 0;">3. 數據篩選 & 弱點分析</h3>
+                <div class="filter-group">
+                    <select id="filterSubject" onchange="loadQuestions()">
+                        <option value="全部">全部科目 (查看弱點)</option>
+                        <option value="國文">國文</option>
+                        <option value="英文">英文</option>
+                        <option value="數學">數學</option>
+                        <option value="物理">物理</option>
+                        <option value="化學">化學</option>
+                        <option value="生物">生物</option>
+                        <option value="地科">地科</option>
+                        <option value="歷史">歷史</option>
+                        <option value="地理">地理</option>
+                        <option value="公民">公民</option>
+                    </select>
+                    <select id="sortOrder" onchange="loadQuestions()">
+                        <option value="newest">最新加入優先</option>
+                        <option value="oldest">最舊加入優先</option>
+                        <option value="reviewAsc">複習次數：少到多 (找弱點)</option>
+                        <option value="reviewDesc">複習次數：多到少</option>
+                    </select>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="radarChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <div class="questions-list" id="questionsList"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 你的 Firebase Config 帳號資訊
+    const firebaseConfig = {
+        apiKey: "AIzaSyA5xWtkaPt0_5doRo55WLIbBroI22ypkZ8",
+        authDomain: "ai-vocab-coach.firebaseapp.com",
+        projectId: "ai-vocab-coach",
+        storageBucket: "ai-vocab-coach.firebasestorage.app",
+        messagingSenderId: "550257355969",
+        appId: "1:550257355969:web:79e07e09c977e861163840"
+    };
+
+    // 初始化 Firebase (僅使用 Firestore 資料庫)
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 監聽並自動載入雲端資料
+    let unsubscribe = null;
+    function loadQuestions() {
+        if (unsubscribe) unsubscribe();
+
+        const filterSubject = document.getElementById("filterSubject").value;
+        const sortOrder = document.getElementById("sortOrder").value;
+
+        // 即時監聽資料庫變化
+        unsubscribe = db.collection("questions").onSnapshot((snapshot) => {
+            const allItems = [];
+            snapshot.forEach(doc => {
+                const item = doc.data();
+                item.id = doc.id;
+                if (typeof item.reviewCount === 'undefined') item.reviewCount = 0;
+                allItems.push(item);
+            });
+            updateAIPrompt(allItems);
+            processAndRender(allItems, filterSubject, sortOrder);
+        }, (error) => {
+            console.error("雲端讀取失敗:", error);
+        });
+    }
+
+    window.onload = function() {
+        loadQuestions();
+    };
+
+    // 處理剪貼簿匯入，相容中英文逗號
+    function quickImport() {
+        const val = document.getElementById("aiImport").value.trim();
+        if (!val) return;
+        
+        const parts = val.split(/[,，]/);
+        if (parts.length >= 4) {
+            document.getElementById("subject").value = parts[0].trim();
+            document.getElementById("unit").value = parts[1].trim();
+            document.getElementById("concept").value = parts[2].trim();
+            document.getElementById("type").value = parts[3].trim();
+        }
+    }
+
+    // 圖片前置壓縮處理 (限制在約 800px 寬度，品質 0.65，確保壓縮在 150KB 以內)
+    function compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const max_size = 800; // 最大解析度寬高
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > max_size) {
+                            height *= max_size / width;
+                            width = max_size;
+                        }
+                    } else {
+                        if (height > max_size) {
+                            width *= max_size / height;
+                            height = max_size;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 轉為 jpg 高壓縮，取得 Base64
+                    const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+                    resolve(dataUrl);
+                };
+            };
+        });
+    }
+
+    // 儲存錯題到 Firestore (直接以壓縮後的 Base64 儲存)
+    async function saveQuestion(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById("submitBtn");
+        const fileInput = document.getElementById("photoInput");
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert("請選擇題目圖片！");
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "正在壓縮並上傳雲端...";
+
+        try {
+            const file = fileInput.files[0];
+            // 壓縮圖片
+            const compressedBase64 = await compressImage(file);
+
+            // 寫入資料到 Firestore
+            const question = {
+                subject: document.getElementById("subject").value,
+                unit: document.getElementById("unit").value,
+                concept: document.getElementById("concept").value,
+                type: document.getElementById("type").value,
+                image: compressedBase64, // 存入壓縮後的 Base64 字串
+                reviewCount: 0,
+                timestamp: Date.now()
+            };
+
+            await db.collection("questions").add(question);
+
+            document.getElementById("wrongQuestionForm").reset();
+            document.getElementById("aiImport").value = "";
+            alert("雲端儲存成功！");
+        } catch (err) {
+            alert("上傳失敗：" + err.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "儲存此錯題";
+        }
+    }
+
+    // 複習次數 +1 (Firestore 更新)
+    async function incrementReview(id) {
+        try {
+            const docRef = db.collection("questions").doc(id);
+            const doc = await docRef.get();
+            const currentCount = doc.data().reviewCount || 0;
+            await docRef.update({ reviewCount: currentCount + 1 });
+        } catch (err) {
+            console.error("更新複習次數失敗:", err);
+        }
+    }
+
+    // 刪除錯題
+    async function deleteQuestion(id) {
+        if (!confirm("確定要刪除這筆錯題嗎？刪除後無法恢復。")) return;
+        try {
+            await db.collection("questions").doc(id).delete();
+        } catch (err) {
+            alert("刪除失敗：" + err.message);
+        }
+    }
+
+    // 動態產生專屬 AI 提示詞
+    function updateAIPrompt(items) {
+        const unitSet = new Set();
+        items.forEach(item => {
+            if (item.unit) unitSet.add(item.unit);
+        });
+        
+        let unitString = Array.from(unitSet).join("、");
+        if (!unitString) unitString = "目前無既有單元，請依題目自行判斷";
+
+        const promptTemplate = `這是一張學測考題照片。請幫我分析這題，並「只」輸出成以下特定的格式（用半形逗號隔開），絕對不要有任何其他解釋、引言或 markdown 標籤：
+
+科目,單元名稱,核心觀念,題型
+
+【分類限制規範（請優先從以下既有清單中選擇，若完全不符合再幫我建立新的）】
+* 科目：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
+* 單元名稱（既有）：[ ${unitString} ]
+* 題型：[單選題, 多選題, 非選擇題]`;
+
+        document.getElementById("aiPromptText").value = promptTemplate;
+    }
+
+    // 複製提示詞
+    function copyPrompt() {
+        const textToCopy = document.getElementById("aiPromptText").value;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert("指令已複製！請直接貼給 AI 進行分析。");
+        }).catch(err => {
+            alert("複製失敗，請手動框選複製。");
+        });
+    }
+
+    // 渲染卡片與繪製圖表
+    function processAndRender(items, filterSub, sortOrder) {
+        const listContainer = document.getElementById("questionsList");
+        listContainer.innerHTML = "";
+        
+        // 1. 篩選
+        let filteredItems = items.filter(item => filterSub === "全部" || item.subject === filterSub);
+
+        // 2. 排序
+        filteredItems.sort((a, b) => {
+            if (sortOrder === "newest") return b.timestamp - a.timestamp;
+            if (sortOrder === "oldest") return a.timestamp - b.timestamp;
+            if (sortOrder === "reviewAsc") return a.reviewCount - b.reviewCount;
+            if (sortOrder === "reviewDesc") return b.reviewCount - a.reviewCount;
+            return 0;
+        });
+
+        // 3. 渲染
+        filteredItems.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "question-card";
+            card.innerHTML = `
+                <div class="question-img-container">
+                    <img class="question-img" src="${item.image}" alt="錯題">
+                </div>
+                <div class="question-details">
+                    <div>
+                        <span class="tag tag-subject">${item.subject}</span>
+                        <span class="tag tag-type">${item.type}</span>
+                        <span class="tag tag-review">複習 ${item.reviewCount} 次</span>
+                        <div class="concept-text">
+                            <strong>單元：</strong>${item.unit}<br>
+                            <strong>觀念：</strong>${item.concept}
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-review" onclick="incrementReview('${item.id}')">已複習 +1</button>
+                        <button class="delete-btn" onclick="deleteQuestion('${item.id}')">刪除此題</button>
+                    </div>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+
+        // 4. 統計弱點並繪製雷達圖
+        const stats = {};
+        if (filterSub === "全部") {
+            items.forEach(item => {
+                stats[item.subject] = (stats[item.subject] || 0) + 1;
+            });
+        } else {
+            filteredItems.forEach(item => {
+                const key = item.unit || "未指定";
+                stats[key] = (stats[key] || 0) + 1;
+            });
+        }
+
+        const sortedStats = Object.entries(stats)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+
+        const labels = sortedStats.map(x => x[0]);
+        const values = sortedStats.map(x => x[1]);
+
+        drawRadarChart(labels, values, filterSub);
+    }
+
+    // 離線雷達圖繪製 (Canvas)
+    function drawRadarChart(labels, values, filterSub) {
+        const canvas = document.getElementById("radarChart");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2 + 10;
+        const r = 100; 
+        const N = labels.length;
+
+        if (N < 3) {
+            ctx.fillStyle = "#888";
+            ctx.font = "13px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("累積至少 3 個不同類別的數據後", cx, cy - 10);
+            ctx.fillText("將自動繪製弱點雷達圖", cx, cy + 10);
+            return;
+        }
+
+        const maxValue = Math.max(...values, 1);
+
+        // 畫蜘蛛網背景
+        ctx.strokeStyle = "#333333";
+        ctx.lineWidth = 1;
+        for (let j = 1; j <= 4; j++) {
+            const scale = j / 4;
+            ctx.beginPath();
+            for (let i = 0; i < N; i++) {
+                const angle = i * (2 * Math.PI / N) - Math.PI / 2;
+                const x = cx + r * scale * Math.cos(angle);
+                const y = cy + r * scale * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // 畫軸線與標籤
+        ctx.strokeStyle = "#444444";
+        for (let i = 0; i < N; i++) {
+            const angle = i * (2 * Math.PI / N) - Math.PI / 2;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            const labelX = cx + (r + 20) * Math.cos(angle);
+            const labelY = cy + (r + 15) * Math.sin(angle);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "12px sans-serif";
+            ctx.textAlign = Math.cos(angle) > 0.1 ? "left" : (Math.cos(angle) < -0.1 ? "right" : "center");
+            ctx.textBaseline = "middle";
+            ctx.fillText(`${labels[i]} (${values[i]}題)`, labelX, labelY);
+        }
+
+        // 畫弱點區域
+        ctx.strokeStyle = "rgba(229, 115, 115, 0.8)";
+        ctx.fillStyle = "rgba(229, 115, 115, 0.25)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < N; i++) {
+            const angle = i * (2 * Math.PI / N) - Math.PI / 2;
+            const valScale = values[i] / maxValue;
+            const x = cx + r * valScale * Math.cos(angle);
+            const y = cy + r * valScale * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#888888";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText(filterSub === "全部" ? "【跨科目弱點分析 (Top 5)】" : `【${filterSub} - 單元弱點分析 (Top 5)】`, 10, 10);
+    }
+</script>
+
+</body>
+</html>
