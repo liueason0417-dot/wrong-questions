@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學測錯題數據庫 (雲端同步版)</title>
+    <title>學測錯題數據庫</title>
     <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
     
@@ -40,7 +40,8 @@
 
         h1 {
             color: #ffffff;
-            margin-bottom: 5px;
+            margin-bottom: 20px;
+            font-size: 24px;
         }
 
         .btn-main-add {
@@ -96,14 +97,6 @@
             overflow-x: auto;
         }
 
-        #weaknessChart {
-            background-color: #1a1a1a;
-            border-radius: 6px;
-            display: block;
-            margin: 0 auto;
-            max-width: 100%;
-        }
-
         /* 自適應緊湊網格：一行多圖相片牆 */
         .questions-list {
             display: grid;
@@ -111,7 +104,6 @@
             gap: 12px;
         }
 
-        /* 卡片大瘦身 */
         .question-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -130,7 +122,6 @@
             box-shadow: 0 0 12px rgba(63, 81, 181, 0.6);
         }
 
-        /* 主頁圖片縮圖限制高度 */
         .question-img-container {
             width: 100%;
             height: 120px; 
@@ -213,8 +204,6 @@
         .btn-toggle-exp:hover { background-color: #444; }
         
         .explanation-img-box { display: none; margin-top: 6px; background-color: #000; border-radius: 4px; overflow: hidden; }
-
-        .card-actions-placeholder { display: none; }
 
         /* --- 劇院級圖片檢視器 Modal 樣式 --- */
         .viewer-modal {
@@ -345,7 +334,7 @@
             padding: 10px 24px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.6);
             backdrop-filter: blur(10px);
             z-index: 1500;
@@ -382,6 +371,11 @@
             border: 1px solid var(--danger-color);
         }
         .batch-floating-bar .btn-batch-delete:hover { background-color: rgba(229, 115, 115, 0.1); }
+        .batch-floating-bar .btn-batch-cancel {
+            background-color: #555;
+            color: #fff;
+        }
+        .batch-floating-bar .btn-batch-cancel:hover { background-color: #666; }
 
         /* --- 上傳與隊列 Modal 樣式 --- */
         .modal {
@@ -459,17 +453,16 @@
 
 <div class="container">
     <header>
-        <h1>學測錯題數據庫 (雲端同步版)</h1>
-        <p style="color: #888; margin: 0;">全平台即時同步 · 支援批量隊列處理 · 橫向觀念圖表</p>
+        <h1>學測錯題數據庫</h1>
     </header>
 
-    <button class="btn-main-add" onclick="openModal()">＋ 新增錯題 (支援多圖批次)</button>
+    <button class="btn-main-add" onclick="openModal()">＋ 新增錯題</button>
 
     <div class="card">
-        <h3 style="margin-top: 0; display: inline-block;">數據篩選 & 弱點排行</h3>
+        <h3 style="margin-top: 0; display: inline-block;">數據篩選</h3>
         <div class="filter-group">
             <select id="filterSubject" onchange="loadQuestions()">
-                <option value="全部">全部科目 (查看弱點)</option>
+                <option value="全部">全部科目</option>
                 <option value="國文">國文</option>
                 <option value="英文">英文</option>
                 <option value="數學">數學</option>
@@ -484,7 +477,7 @@
             <select id="sortOrder" onchange="loadQuestions()">
                 <option value="newest">最新加入優先</option>
                 <option value="oldest">最舊加入優先</option>
-                <option value="reviewAsc">複習次數：少到多 (找弱點)</option>
+                <option value="reviewAsc">複習次數：少到多</option>
                 <option value="reviewDesc">複習次數：多到少</option>
             </select>
         </div>
@@ -532,9 +525,9 @@
     <div class="viewer-content">
         <div class="viewer-header">
             <div class="viewer-tools">
-                <button onclick="zoomImage(0.3)">放大 ＋</button>
-                <button onclick="zoomImage(-0.3)">縮小 －</button>
-                <button onclick="resetZoom()">重設比例</button>
+                <button onclick="zoomImage(0.3)">＋</button>
+                <button onclick="zoomImage(-0.3)">－</button>
+                <button onclick="resetZoom()">重設</button>
             </div>
             <span class="close-viewer" onclick="closeImageViewer()">&times;</span>
         </div>
@@ -546,6 +539,7 @@
 </div>
 
 <div class="batch-floating-bar" id="batchFloatingBar">
+    <button class="btn-batch-cancel" onclick="cancelSelection()">取消</button>
     <span>已選取 <span id="batchSelectCount" style="color: var(--warning-color);">0</span> 題</span>
     <button onclick="batchIncrementReview()">批量複習 +1</button>
     <button class="btn-batch-delete" onclick="batchDelete()">批量刪除</button>
@@ -621,14 +615,17 @@
         if (!item) return;
 
         document.getElementById("viewerImage").src = item.image;
-        const isGroup = filteredSortedItems.filter(i => i.timestamp === item.timestamp).length > 1;
+        
+        // 使用 groupId 來判定是否為同組，若無 groupId 則向下相容使用 timestamp
+        const itemGroupId = item.groupId || item.timestamp;
+        const isGroup = filteredSortedItems.filter(i => (i.groupId || i.timestamp) === itemGroupId).length > 1;
         const dateStr = new Date(item.timestamp).toLocaleDateString('zh-TW');
 
         const metaHtml = `
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:5px;">
                 <span class="tag-subject">${item.subject}</span>
                 <span style="color:#aaa; font-size:12px;">${item.type}</span>
-                <span style="color:#aaa; font-size:12px;">已複習 ${item.reviewCount} 次</span>
+                <span style="color:#aaa; font-size:12px;">複習 ${item.reviewCount} 次</span>
                 <span style="color:#aaa; font-size:12px; margin-left:auto;">${dateStr}</span>
             </div>
             <div style="color:#fff; font-size:14px; line-height:1.4;">
@@ -637,9 +634,9 @@
             ${item.notes ? `<div class="notes-box"><strong>備註：</strong>${item.notes}</div>` : ''}
             
             <div class="viewer-action-line">
-                <button class="viewer-btn-review" onclick="viewerIncrementReview()">已複習 +1</button>
+                <button class="viewer-btn-review" onclick="viewerIncrementReview()">複習 +1</button>
                 ${isGroup ? `<button class="viewer-btn-review viewer-btn-group-review" onclick="viewerIncrementGroupReview()">同組 +1</button>` : ''}
-                <button class="viewer-btn-delete" onclick="viewerDeleteQuestion()">刪除此題</button>
+                <button class="viewer-btn-delete" onclick="viewerDeleteQuestion()">刪除</button>
             </div>
         `;
         document.getElementById("viewerMetadata").innerHTML = metaHtml;
@@ -710,14 +707,15 @@
         const item = window.currentItemsMap[id];
         if (!item) return;
 
-        const ts = item.timestamp;
+        const gid = item.groupId || item.timestamp;
         filteredSortedItems.forEach(i => {
-            if (i.timestamp === ts) i.reviewCount = (i.reviewCount || 0) + 1;
+            if ((i.groupId || i.timestamp) === gid) i.reviewCount = (i.reviewCount || 0) + 1;
         });
         renderViewerContent(id);
 
         try {
-            const snapshot = await db.collection("questions").where("timestamp", "==", ts).get();
+            const queryField = item.groupId ? "groupId" : "timestamp";
+            const snapshot = await db.collection("questions").where(queryField, "==", gid).get();
             const batch = db.batch();
             snapshot.forEach(doc => {
                 batch.update(db.collection("questions").doc(doc.id), { 
@@ -811,6 +809,12 @@
         }
     }
 
+    function cancelSelection() {
+        selectedCardIds.clear();
+        lastSelectedId = null;
+        updateSelectionUI();
+    }
+
     async function batchIncrementReview() {
         if (selectedCardIds.size === 0) return;
         const batch = db.batch();
@@ -821,8 +825,7 @@
         });
         try {
             await batch.commit();
-            selectedCardIds.clear();
-            updateSelectionUI();
+            cancelSelection();
         } catch (err) { alert("批量更新失敗：" + err.message); }
     }
 
@@ -834,8 +837,7 @@
         selectedCardIds.forEach(id => { batch.delete(db.collection("questions").doc(id)); });
         try {
             await batch.commit();
-            selectedCardIds.clear();
-            updateSelectionUI();
+            cancelSelection();
         } catch (err) { alert("批量刪除失敗：" + err.message); }
     }
 
@@ -973,7 +975,9 @@
         try {
             const batch = db.batch();
             let successCount = 0;
-            const nowTimestamp = Date.now(); 
+            // 使用 groupId 綁定題組，並加入微小 offset 以確保順序正確
+            const baseGroupId = Date.now(); 
+            let timeOffset = 0;
 
             for (let i = 0; i < selectedFilesQueue.length; i++) {
                 const qItem = selectedFilesQueue[i];
@@ -1005,11 +1009,13 @@
                             explanationImage: expBase64,
                             notes: finalNotes,
                             reviewCount: 0,
-                            timestamp: nowTimestamp
+                            timestamp: baseGroupId + timeOffset,
+                            groupId: baseGroupId
                         };
                         const docRef = db.collection("questions").doc();
                         batch.set(docRef, question);
                         successCount++;
+                        timeOffset++; // 確保下一題的 timestamp +1 毫秒
                     }
                 });
             }
@@ -1061,8 +1067,11 @@
         listContainer.innerHTML = "";
         filteredSortedItems = items.filter(item => filterSub === "全部" || item.subject === filterSub);
 
-        const timestampCounts = {};
-        filteredSortedItems.forEach(item => { timestampCounts[item.timestamp] = (timestampCounts[item.timestamp] || 0) + 1; });
+        const groupCounts = {};
+        filteredSortedItems.forEach(item => { 
+            const gid = item.groupId || item.timestamp;
+            groupCounts[gid] = (groupCounts[gid] || 0) + 1; 
+        });
 
         filteredSortedItems.sort((a, b) => {
             if (sortOrder === "newest") return b.timestamp - a.timestamp;
@@ -1076,7 +1085,8 @@
             const dateStr = new Date(item.timestamp).toLocaleDateString('zh-TW');
             const hasNotes = item.notes && item.notes.trim().length > 0;
             const hasExplanation = item.explanationImage && item.explanationImage.trim().length > 0;
-            const isGroup = timestampCounts[item.timestamp] > 1;
+            const gid = item.groupId || item.timestamp;
+            const isGroup = groupCounts[gid] > 1;
 
             const card = document.createElement("div");
             card.className = "question-card";
@@ -1165,7 +1175,6 @@
             return;
         }
 
-        // 判斷是否執行折疊隱藏
         let displayData = data;
         const hasMoreThanFive = data.length > 5;
         if (hasMoreThanFive && !chartExpanded) {
@@ -1208,7 +1217,6 @@
             ctx.fillText(`${count} 題`, leftMargin + barWidth + 8, y + 10);
         });
 
-        // 動態注入/控制折疊按鈕 UI
         let toggleBtn = document.getElementById("chartToggleBtn");
         if (!toggleBtn) {
             toggleBtn = document.createElement("button");
