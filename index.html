@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學測錯題數據庫 - 互動訂正版</title>
+    <title>學測錯題數據庫 - Canva互動版</title>
     <!-- 引入 Firebase v10 Compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
@@ -29,6 +29,9 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
             background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0;
         }
+        
+        /* 鎖死背景滾動 */
+        body.modal-open { overflow: hidden; }
 
         /* --- 頂部導航列 --- */
         .navbar {
@@ -96,7 +99,6 @@
 
         .question-details { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
         
-        /* 自訂標籤 (Tags) 樣式 */
         .tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
         .custom-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
         .tag-remove-btn { margin-left: 4px; cursor: pointer; opacity: 0.6; font-size: 10px; }
@@ -120,9 +122,16 @@
         .batch-left { display: flex; align-items: center; gap: 12px; }
         .batch-count-text { font-size: 14px; color: var(--text-main); font-weight: 600; }
         .batch-count-num { color: var(--warning-color); font-size: 16px; }
-        .btn-batch-cancel { background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+        
+        .btn-batch-cancel { 
+            background: rgba(255,255,255,0.1); border: none; color: var(--text-main); font-size: 13px; 
+            cursor: pointer; padding: 6px 12px; border-radius: 6px; transition: background 0.2s; font-weight: 600;
+        }
+        .btn-batch-cancel:hover { background: rgba(255,255,255,0.2); }
+        
         .batch-right { display: flex; gap: 8px; flex-wrap: wrap; }
         .batch-right button { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .batch-right button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* --- 圖片檢視器 Modal --- */
         .viewer-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(5px); }
@@ -135,41 +144,83 @@
         .viewer-tools button.active { background: var(--accent-color); }
         .close-viewer { color: #fff; font-size: 28px; cursor: pointer; }
         
-        /* 側邊浮動畫筆工具列 */
+        /* --- Canva 風格：可拖曳智慧工具列 --- */
         .draw-tools-floating {
             position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
-            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px;
-            display: none; flex-direction: column; gap: 15px; z-index: 2200; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 10px;
+            display: none; z-index: 2300; box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+            transition: flex-direction 0.3s;
         }
-        .tool-group { display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; align-items: center; }
-        .tool-group:last-child { border-bottom: none; padding-bottom: 0; }
-        .tool-btn { width: 36px; height: 36px; border-radius: 8px; border: none; background: transparent; color: white; font-size: 16px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+        .draw-tools-floating.vertical { flex-direction: column; gap: 12px; width: 44px; }
+        .draw-tools-floating.vertical .tool-group { flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.1); border-right: none; padding-bottom: 10px; padding-right: 0; }
+        .draw-tools-floating.horizontal { flex-direction: row; gap: 12px; height: 44px; align-items: center; }
+        .draw-tools-floating.horizontal .tool-group { flex-direction: row; border-right: 1px solid rgba(255,255,255,0.1); border-bottom: none; padding-right: 10px; padding-bottom: 0; }
+        
+        .tool-group { display: flex; gap: 6px; align-items: center; justify-content: center; position: relative; }
+        .tool-group:last-child { border: none !important; padding: 0 !important; }
+        
+        .drag-handle { color: var(--text-muted); font-size: 18px; cursor: grab; display: flex; align-items: center; justify-content: center; user-select: none; }
+        .drag-handle:active { cursor: grabbing; }
+        .vertical .drag-handle { padding-bottom: 5px; }
+        .horizontal .drag-handle { padding-right: 5px; }
+
+        .tool-btn { 
+            width: 34px; height: 34px; border-radius: 8px; border: none; background: transparent; color: white; 
+            font-size: 16px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; position: relative;
+        }
         .tool-btn:hover { background: rgba(255,255,255,0.1); }
         .tool-btn.active { background: var(--accent-color); }
-        .draw-tools-floating input[type="color"] { width: 28px; height: 28px; padding: 0; border: none; border-radius: 50%; cursor: pointer; background: none; }
+        
+        /* 懸浮提示 Tooltip */
+        .tool-btn::after {
+            content: attr(data-tooltip); position: absolute; background: #000; color: #fff; padding: 4px 8px; border-radius: 4px;
+            font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 2400;
+        }
+        .tool-btn:hover::after { opacity: 1; }
+        .vertical .tool-btn::after { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 10px; }
+        .horizontal .tool-btn::after { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; }
+
+        /* 橡皮擦子選單 */
+        .eraser-menu {
+            display: none; position: absolute; background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 5px; gap: 5px; z-index: 2500; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .vertical .eraser-menu { left: 100%; top: 0; margin-left: 10px; flex-direction: row; }
+        .horizontal .eraser-menu { bottom: 100%; left: 0; margin-bottom: 10px; flex-direction: column; }
+        .eraser-menu.show { display: flex; }
+
+        .draw-tools-floating input[type="color"] { width: 26px; height: 26px; padding: 0; border: none; border-radius: 50%; cursor: pointer; background: none; }
         .draw-tools-floating input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         .draw-tools-floating input[type="color"]::-webkit-color-swatch { border: 2px solid #fff; border-radius: 50%; }
+        .vertical input[type="range"] { width: 60px; transform: rotate(-90deg); margin: 20px 0; }
+        .horizontal input[type="range"] { width: 80px; }
 
         .viewer-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(255,255,255,0.1); color: #fff; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; z-index: 2100; }
         .viewer-prev-btn { left: 20px; } .viewer-next-btn { right: 20px; }
         
-        /* 圖片與畫布容器 */
+        /* 圖片與畫布容器 (支援縮放) */
         .viewer-img-container { flex-grow: 1; overflow: auto; text-align: center; padding: 20px; display: flex; align-items: center; justify-content: center; position: relative; }
-        .image-wrapper { position: relative; display: inline-block; }
-        #viewerImage { display: block; max-width: 90vw; max-height: 85vh; width: auto; height: auto; opacity: 0.5; border-radius: 8px; transition: transform 0.2s ease-out; }
-        #annotationCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 3; cursor: crosshair; touch-action: none; border-radius: 8px; transition: transform 0.2s ease-out; }
+        .image-wrapper { position: relative; display: inline-block; transition: transform 0.2s ease-out; transform-origin: center center; }
+        #viewerImage { display: block; max-width: 90vw; max-height: 85vh; width: auto; height: auto; opacity: 0.5; border-radius: 8px; }
+        #annotationCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 3; cursor: crosshair; touch-action: none; border-radius: 8px; }
+        
+        /* 文字輸入框 */
+        #textAnnotationInput {
+            display: none; position: absolute; z-index: 3000; background: rgba(0,0,0,0.6); border: 1px dashed #fff; 
+            color: white; outline: none; padding: 4px; border-radius: 4px; font-family: sans-serif;
+        }
 
-        /* 浮動輕量化資訊欄 */
+        /* 浮浮輕量化資訊欄 */
         .viewer-metadata-floating {
             position: absolute; bottom: 20px; right: 20px; width: 320px;
-            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px;
             z-index: 2200; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: opacity 0.3s;
         }
         .btn-toggle-meta {
-            position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px 16px; border-radius: 20px; z-index: 2201; cursor: pointer; display: none;
+            position: absolute; bottom: 20px; right: 20px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px 16px; border-radius: 20px; z-index: 2201; cursor: pointer; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         
         .viewer-action-line { display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; flex-wrap: wrap; align-items: center; }
@@ -235,7 +286,6 @@
                 <option value="地理">地理</option>
                 <option value="公民">公民</option>
             </select>
-            <!-- 標籤篩選器 -->
             <select id="filterTag" onchange="renderQuestions()">
                 <option value="全部">🏷️ 所有標籤</option>
             </select>
@@ -310,30 +360,60 @@
     </div>
 </div>
 
-<!-- 圖片檢視器 Modal (含畫筆與浮動資訊欄) -->
+<!-- 匯出試卷 Modal -->
+<div id="exportModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <span class="close-modal" onclick="closeExportModal()">&times;</span>
+        <h2 style="margin-top:0; border-bottom:1px solid var(--border-color); padding-bottom:15px;">📤 匯出試卷</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">請選擇您需要的匯出格式：</p>
+        
+        <button class="btn-nav btn-primary" style="width:100%; justify-content:center; padding:15px; margin-bottom:8px; font-size: 15px;" onclick="batchExportPDF('guide', this)">
+            📖 匯出 PDF (複習講義模式)
+        </button>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 0; margin-bottom: 20px; text-align: center;">題目、標籤與詳解排在一起，適合考前快速翻閱</p>
+
+        <button class="btn-nav btn-primary" style="width:100%; justify-content:center; padding:15px; margin-bottom:8px; font-size: 15px; background-color: #10b981;" onclick="batchExportPDF('test', this)">
+            📝 匯出 PDF (實戰測驗模式)
+        </button>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 0; margin-bottom: 20px; text-align: center;">前半段純題目，最後一頁附解答，適合重新測驗</p>
+
+        <button class="btn-nav btn-secondary" style="width:100%; justify-content:center; padding:15px; font-size: 15px;" onclick="batchExportWord(this)">
+            📄 匯出 Word (純題目)
+        </button>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px; margin-bottom: 0; text-align: center;">適合需要手動重新排版或編輯題目的情境</p>
+    </div>
+</div>
+
+<!-- 圖片檢視器 Modal -->
 <div id="imageViewerModal" class="viewer-modal">
     <button class="viewer-nav-btn viewer-prev-btn" id="viewerPrevBtn" onclick="navigateViewer(-1)">＜</button>
     <button class="viewer-nav-btn viewer-next-btn" id="viewerNextBtn" onclick="navigateViewer(1)">＞</button>
     
-    <!-- 側邊浮動畫筆工具列 -->
-    <div class="draw-tools-floating" id="drawTools">
+    <!-- Canva 風格：可拖曳智慧工具列 -->
+    <div class="draw-tools-floating vertical" id="drawTools">
+        <div class="drag-handle" id="dragHandle" title="拖曳移動">⋮⋮</div>
         <div class="tool-group">
-            <button class="tool-btn active" data-tool="free" onclick="setTool('free')" title="自由畫筆">✏️</button>
-            <button class="tool-btn" data-tool="line" onclick="setTool('line')" title="直線">📏</button>
-            <button class="tool-btn" data-tool="rect" onclick="setTool('rect')" title="矩形框">⬜</button>
+            <button class="tool-btn active" data-tool="free" onclick="setTool('free')" data-tooltip="自由畫筆">✏️</button>
+            <button class="tool-btn" data-tool="autoShape" onclick="setTool('autoShape')" data-tooltip="智慧圖形 (自動變圓/方)">✨</button>
+            <button class="tool-btn" data-tool="line" onclick="setTool('line')" data-tooltip="直線">╱</button>
+            <button class="tool-btn" data-tool="arrow" onclick="setTool('arrow')" data-tooltip="箭頭">↗️</button>
+            <button class="tool-btn" data-tool="text" onclick="setTool('text')" data-tooltip="輸入文字">🇹</button>
         </div>
         <div class="tool-group">
-            <input type="color" id="brushColor" value="#ef4444" title="顏色">
-            <input type="range" id="brushSize" min="1" max="15" value="3" title="粗細" style="width: 40px; margin-top: 5px;">
+            <input type="color" id="brushColor" value="#ef4444" data-tooltip="選擇顏色">
+            <input type="range" id="brushSize" min="1" max="15" value="3" data-tooltip="調整粗細">
+        </div>
+        <div class="tool-group" id="eraserGroup">
+            <button class="tool-btn" id="btnEraserMain" onclick="toggleEraserMenu()" data-tooltip="橡皮擦選單">🧽</button>
+            <div id="eraserMenu" class="eraser-menu">
+                <button class="tool-btn" onclick="setTool('eraser')" data-tooltip="一般擦拭">🧽</button>
+                <button class="tool-btn" onclick="setTool('strokeEraser')" data-tooltip="筆跡消除 (點擊整條刪除)">🪄</button>
+            </div>
         </div>
         <div class="tool-group">
-            <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')" title="一般橡皮擦">🧽</button>
-            <button class="tool-btn" data-tool="strokeEraser" onclick="setTool('strokeEraser')" title="筆跡消除 (點擊整條刪除)">🪄</button>
-        </div>
-        <div class="tool-group">
-            <button class="tool-btn" onclick="undo()" title="上一步 (Ctrl+Z)">↩️</button>
-            <button class="tool-btn" onclick="clearCanvas()" title="全部清空">🗑️</button>
-            <button class="tool-btn" onclick="saveAnnotation()" title="儲存筆跡" style="color: var(--success-color);">💾</button>
+            <button class="tool-btn" onclick="undo()" data-tooltip="上一步 (Ctrl+Z)">↩️</button>
+            <button class="tool-btn" onclick="clearCanvas()" data-tooltip="全部清空">🗑️</button>
+            <button class="tool-btn" onclick="saveAnnotation()" data-tooltip="儲存筆跡" style="color: var(--success-color);">💾</button>
         </div>
     </div>
 
@@ -343,7 +423,7 @@
                 <button onclick="zoomImage(0.3)">放大 ＋</button>
                 <button onclick="zoomImage(-0.3)">縮小 －</button>
                 <button onclick="resetZoom()">重設</button>
-                <button id="btnToggleDraw" onclick="toggleAnnotationMode()" style="margin-left: 15px; background: var(--accent-color);">✏️ 標註/訂正</button>
+                <button id="btnToggleDraw" onclick="toggleAnnotationMode()" style="margin-left: 15px; background: var(--accent-color);">✏️ 標註</button>
             </div>
             <span class="close-viewer" onclick="closeImageViewer()">&times;</span>
         </div>
@@ -352,13 +432,12 @@
             <div class="image-wrapper" id="imageWrapper">
                 <img id="viewerImage" src="" alt="放大圖片">
                 <canvas id="annotationCanvas"></canvas>
+                <input type="text" id="textAnnotationInput" placeholder="輸入文字後按 Enter...">
             </div>
         </div>
         
         <!-- 浮動輕量化資訊欄 -->
-        <div class="viewer-metadata-floating" id="viewerMetadata">
-            <!-- 內容由 JS 動態生成 -->
-        </div>
+        <div class="viewer-metadata-floating" id="viewerMetadata"></div>
         <button class="btn-toggle-meta" id="btnToggleMeta" onclick="toggleMetadata()">ℹ️ 顯示資訊</button>
     </div>
 </div>
@@ -370,8 +449,7 @@
         <button class="btn-batch-cancel" onclick="cancelSelection()">取消選取</button>
     </div>
     <div class="batch-right">
-        <button class="btn-nav btn-primary" onclick="batchExportSmartPDF()">🖨️ 智慧列印 (附詳解與筆跡)</button>
-        <button class="btn-nav btn-secondary" onclick="batchExportWord()">📄 匯出 Word</button>
+        <button class="btn-nav btn-primary" onclick="openExportModal()">📤 匯出試卷</button>
         <button class="btn-nav btn-secondary" style="color:var(--danger-color); border:1px solid var(--danger-color);" onclick="batchDelete()">🗑️ 刪除</button>
     </div>
 </div>
@@ -403,7 +481,6 @@
     let pressTimer;
     let chartExpanded = false;
 
-    // 標籤顏色分配器
     const tagColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
     function getTagColor(tag) {
         let hash = 0;
@@ -415,8 +492,15 @@
         loadQuestions();
         setupSwipeGestures();
         setupCanvas();
+        setupDraggableToolbar();
         window.addEventListener("resize", function() {
             if(document.getElementById("chartSection").classList.contains("active")) triggerChartRebuilt();
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#eraserGroup')) {
+                document.getElementById('eraserMenu').classList.remove('show');
+            }
         });
     };
 
@@ -447,9 +531,7 @@
         const select = document.getElementById("filterTag");
         const currentVal = select.value;
         select.innerHTML = `<option value="全部">🏷️ 所有標籤</option>`;
-        tags.sort().forEach(tag => {
-            select.innerHTML += `<option value="${tag}">${tag}</option>`;
-        });
+        tags.sort().forEach(tag => { select.innerHTML += `<option value="${tag}">${tag}</option>`; });
         if (tags.includes(currentVal)) select.value = currentVal;
     }
 
@@ -506,6 +588,7 @@
                 card.addEventListener("click", (e) => handleCardClick(e, item.id));
                 card.addEventListener("touchstart", () => handleTouchStart(item.id), { passive: true });
                 card.addEventListener("touchend", handleTouchCancel, { passive: true });
+                card.addEventListener("touchmove", handleTouchCancel, { passive: true });
 
                 card.innerHTML = `
                     <div class="card-checkbox"></div>
@@ -540,11 +623,9 @@
         const metaPanel = document.getElementById("viewerMetadata");
         const toggleBtn = document.getElementById("btnToggleMeta");
         if (isMetaVisible) {
-            metaPanel.style.display = "block";
-            toggleBtn.style.display = "none";
+            metaPanel.style.display = "block"; toggleBtn.style.display = "none";
         } else {
-            metaPanel.style.display = "none";
-            toggleBtn.style.display = "block";
+            metaPanel.style.display = "none"; toggleBtn.style.display = "block";
         }
     }
 
@@ -555,6 +636,8 @@
         
         const item = window.currentItemsMap[id];
         if (!item) return;
+        
+        document.body.classList.add('modal-open'); 
         
         const viewerImg = document.getElementById("viewerImage");
         viewerImg.src = item.thumbnail || item.image || ""; 
@@ -578,15 +661,8 @@
         if (currentViewerId === id) { 
             viewerImg.src = item.fullImage || item.image || viewerImg.src; 
             viewerImg.style.opacity = "1"; 
-            
-            // 載入塗鴉層到 Canvas
-            if (item.annotationImage) {
-                loadBaseAnnotation(item.annotationImage);
-            } else {
-                baseAnnotationImg = null;
-                drawHistory = [];
-                redrawCanvas();
-            }
+            if (item.annotationImage) loadBaseAnnotation(item.annotationImage);
+            else { baseAnnotationImg = null; drawHistory = []; redrawCanvas(); }
         }
     }
 
@@ -620,8 +696,9 @@
             </div>
 
             <div class="viewer-action-line">
-                <span style="color:var(--text-muted); font-size:12px;">複習 ${item.reviewCount} 次</span>
-                <button class="viewer-btn-review" onclick="viewerIncrementReview('${id}')">🔄 +1</button>
+                <span style="color:var(--text-muted); font-size:12px; margin-right: 10px;">複習 ${item.reviewCount} 次</span>
+                <button class="viewer-btn-review" onclick="viewerIncrementReview('${id}', 1)">🔄 +1</button>
+                <button class="viewer-btn-review" onclick="viewerIncrementReview('${id}', -1)">➖ -1</button>
                 <button class="viewer-btn-delete" onclick="viewerDeleteQuestion('${id}')">🗑️ 刪除</button>
             </div>
         `;
@@ -632,12 +709,10 @@
         const input = document.getElementById("newTagInput");
         const tag = input.value.trim();
         if (!tag) return;
-        
         const item = window.currentItemsMap[id];
         if (!item.tags) item.tags = [];
         if (!item.tags.includes(tag)) {
-            item.tags.push(tag);
-            renderViewerMetadata(id); 
+            item.tags.push(tag); renderViewerMetadata(id); 
             try { await db.collection("questions").doc(id).update({ tags: firebase.firestore.FieldValue.arrayUnion(tag) }); } 
             catch (err) { console.error("新增標籤失敗", err); }
         }
@@ -647,30 +722,27 @@
     async function removeTag(id, tag) {
         const item = window.currentItemsMap[id];
         if (!item.tags) return;
-        item.tags = item.tags.filter(t => t !== tag);
-        renderViewerMetadata(id); 
+        item.tags = item.tags.filter(t => t !== tag); renderViewerMetadata(id); 
         try { await db.collection("questions").doc(id).update({ tags: firebase.firestore.FieldValue.arrayRemove(tag) }); } 
         catch (err) { console.error("刪除標籤失敗", err); }
     }
 
-    async function viewerIncrementReview(id) {
-        const item = window.currentItemsMap[id];
-        item.reviewCount = (item.reviewCount || 0) + 1;
+    async function viewerIncrementReview(id, amount) {
+        const item = window.currentItemsMap[id]; 
+        let newCount = (item.reviewCount || 0) + amount;
+        if (newCount < 0) newCount = 0; 
+        item.reviewCount = newCount; 
         renderViewerMetadata(id);
-        try { await db.collection("questions").doc(id).update({ reviewCount: item.reviewCount }); } 
-        catch (err) { console.error(err); }
+        renderQuestions(); 
+        try { await db.collection("questions").doc(id).update({ reviewCount: newCount }); } catch (err) {}
     }
 
     async function viewerDeleteQuestion(id) {
         if (!confirm("確定要刪除嗎？")) return;
-        let idx = filteredSortedItems.findIndex(item => item.id === id);
-        let nextId = null;
-        if (filteredSortedItems.length > 1) {
-            nextId = (idx < filteredSortedItems.length - 1) ? filteredSortedItems[idx + 1].id : filteredSortedItems[idx - 1].id;
-        }
+        let idx = filteredSortedItems.findIndex(item => item.id === id); let nextId = null;
+        if (filteredSortedItems.length > 1) nextId = (idx < filteredSortedItems.length - 1) ? filteredSortedItems[idx + 1].id : filteredSortedItems[idx - 1].id;
         try {
-            await db.collection("questions").doc(id).delete();
-            await db.collection("question_images").doc(id).delete(); 
+            await db.collection("questions").doc(id).delete(); await db.collection("question_images").doc(id).delete(); 
             if (nextId) openImageViewer(nextId); else closeImageViewer();
         } catch (err) { alert("刪除失敗：" + err.message); }
     }
@@ -679,7 +751,7 @@
     let canvas, ctx;
     let isDrawingMode = false;
     let isDrawing = false;
-    let currentTool = 'free'; // free, line, rect, eraser, strokeEraser
+    let currentTool = 'free'; 
     let drawHistory = [];
     let currentPath = null;
     let baseAnnotationImg = null;
@@ -697,7 +769,10 @@
         canvas.addEventListener('touchend', endPosition);
         canvas.addEventListener('touchmove', draw, { passive: false });
         
-        // Ctrl+Z 快捷鍵
+        const textInput = document.getElementById('textAnnotationInput');
+        textInput.addEventListener('blur', saveTextAnnotation);
+        textInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') saveTextAnnotation(); });
+
         document.addEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
                 if (document.getElementById("imageViewerModal").style.display === "block" && isDrawingMode) {
@@ -707,14 +782,61 @@
         });
     }
 
+    function setupDraggableToolbar() {
+        const toolbar = document.getElementById('drawTools');
+        const handle = document.getElementById('dragHandle');
+        let isDraggingToolbar = false;
+        let dragOffsetX = 0, dragOffsetY = 0;
+
+        function startDrag(e) {
+            isDraggingToolbar = true;
+            const rect = toolbar.getBoundingClientRect();
+            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            dragOffsetX = clientX - rect.left;
+            dragOffsetY = clientY - rect.top;
+        }
+
+        function doDrag(e) {
+            if (!isDraggingToolbar) return;
+            e.preventDefault();
+            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            toolbar.style.left = (clientX - dragOffsetX) + 'px';
+            toolbar.style.top = (clientY - dragOffsetY) + 'px';
+            toolbar.style.transform = 'none'; 
+        }
+
+        function endDrag() {
+            if (!isDraggingToolbar) return;
+            isDraggingToolbar = false;
+            const rect = toolbar.getBoundingClientRect();
+            const winH = window.innerHeight;
+            const centerY = rect.top + rect.height / 2;
+            
+            if (centerY < winH * 0.25 || centerY > winH * 0.75) {
+                toolbar.classList.remove('vertical'); toolbar.classList.add('horizontal');
+            } else {
+                toolbar.classList.remove('horizontal'); toolbar.classList.add('vertical');
+            }
+        }
+
+        handle.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', endDrag);
+        
+        handle.addEventListener('touchstart', startDrag, { passive: false });
+        document.addEventListener('touchmove', doDrag, { passive: false });
+        document.addEventListener('touchend', endDrag);
+    }
+
     function loadBaseAnnotation(src) {
         baseAnnotationImg = new Image();
         baseAnnotationImg.onload = () => {
-            // 確保畫布尺寸正確
             const viewerImg = document.getElementById("viewerImage");
             canvas.width = viewerImg.naturalWidth || 800;
             canvas.height = viewerImg.naturalHeight || 600;
-            canvas.style.display = "block"; // 預設顯示塗鴉層
+            canvas.style.display = "block"; 
             drawHistory = [];
             redrawCanvas();
         };
@@ -731,8 +853,7 @@
         document.getElementById("viewerNextBtn").style.display = isDrawingMode ? "none" : "flex";
 
         if (isDrawingMode) {
-            btn.classList.add("active");
-            btn.innerText = "✏️ 標註中...";
+            btn.classList.add("active"); btn.innerText = "✏️ 標註中...";
             tools.style.display = "flex";
             
             if (!canvas.width || canvas.width === 300) {
@@ -740,8 +861,7 @@
                 canvas.height = viewerImg.naturalHeight || 600;
             }
             canvas.style.display = "block";
-            canvas.style.pointerEvents = "auto"; // 允許點擊
-            resetZoom();
+            canvas.style.pointerEvents = "auto"; 
             setTool('free');
         } else {
             cancelAnnotation();
@@ -751,21 +871,36 @@
     function cancelAnnotation() {
         isDrawingMode = false;
         document.getElementById("btnToggleDraw").classList.remove("active");
-        document.getElementById("btnToggleDraw").innerText = "✏️ 標註/訂正";
+        document.getElementById("btnToggleDraw").innerText = "✏️ 標註";
         document.getElementById("drawTools").style.display = "none";
-        canvas.style.pointerEvents = "none"; // 關閉點擊，只做顯示
+        document.getElementById("textAnnotationInput").style.display = "none";
+        document.getElementById("eraserMenu").classList.remove('show');
+        canvas.style.pointerEvents = "none"; 
         
         document.getElementById("viewerPrevBtn").style.display = "flex";
         document.getElementById("viewerNextBtn").style.display = "flex";
     }
 
+    function toggleEraserMenu() {
+        document.getElementById('eraserMenu').classList.toggle('show');
+    }
+
     function setTool(tool) {
         currentTool = tool;
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => btn.classList.remove('active'));
-        document.querySelector(`.tool-btn[data-tool="${tool}"]`).classList.add('active');
         
-        if (tool === 'eraser' || tool === 'strokeEraser') canvas.style.cursor = 'cell';
-        else canvas.style.cursor = 'crosshair';
+        if (tool === 'eraser' || tool === 'strokeEraser') {
+            const mainBtn = document.getElementById('btnEraserMain');
+            mainBtn.innerText = tool === 'eraser' ? '🧽' : '🪄';
+            mainBtn.classList.add('active');
+            document.getElementById('eraserMenu').classList.remove('show');
+            canvas.style.cursor = 'cell';
+        } else {
+            document.getElementById('btnEraserMain').classList.remove('active');
+            document.querySelector(`.tool-btn[data-tool="${tool}"]`).classList.add('active');
+            if (tool === 'text') canvas.style.cursor = 'text';
+            else canvas.style.cursor = 'crosshair';
+        }
     }
 
     function getMousePos(e) {
@@ -784,7 +919,12 @@
         
         if (currentTool === 'strokeEraser') {
             eraseStrokeAt(pos.x, pos.y);
-            isDrawing = true; // 允許拖曳連續消除
+            isDrawing = true; 
+            return;
+        }
+
+        if (currentTool === 'text') {
+            showTextInput(pos.x, pos.y);
             return;
         }
 
@@ -793,16 +933,74 @@
             tool: currentTool,
             color: document.getElementById('brushColor').value,
             size: document.getElementById('brushSize').value * (currentTool === 'eraser' ? 3 : 1),
-            points: [pos],
-            start: pos,
-            end: pos
+            points: [pos], start: pos, end: pos
         };
+    }
+
+    function recognizeShape(points) {
+        if (points.length < 10) return null; 
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        points.forEach(p => {
+            if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+        });
+
+        let w = maxX - minX; let h = maxY - minY;
+        let cx = minX + w / 2; let cy = minY + h / 2;
+        let start = points[0]; let end = points[points.length - 1];
+        let distStartEnd = Math.hypot(start.x - end.x, start.y - end.y);
+        let perimeter = 2 * (w + h);
+
+        let isLine = false;
+        if (w < 15 || h < 15) isLine = true;
+        else {
+            let lineLen = Math.hypot(end.x - start.x, end.y - start.y);
+            if (lineLen > 0) {
+                let errLine = 0;
+                points.forEach(p => {
+                    let num = Math.abs((end.y - start.y)*p.x - (end.x - start.x)*p.y + end.x*start.y - end.y*start.x);
+                    errLine += num / lineLen;
+                });
+                errLine /= points.length;
+                if (errLine < 15 && distStartEnd > perimeter * 0.2) isLine = true;
+            }
+        }
+        if (isLine) return { tool: 'line', start: start, end: end };
+
+        if (distStartEnd < perimeter * 0.25 || distStartEnd < 50) {
+            let errEllipse = 0; let errRect = 0;
+            points.forEach(p => {
+                let nx = (p.x - cx) / (w / 2); let ny = (p.y - cy) / (h / 2);
+                errEllipse += Math.abs(nx*nx + ny*ny - 1);
+                let dx = Math.min(Math.abs(p.x - minX), Math.abs(p.x - maxX)) / (w/2);
+                let dy = Math.min(Math.abs(p.y - minY), Math.abs(p.y - maxY)) / (h/2);
+                errRect += Math.min(dx, dy);
+            });
+            errEllipse /= points.length; errRect /= points.length;
+
+            if (errEllipse < errRect * 1.5) return { tool: 'ellipse', start: {x: minX, y: minY}, end: {x: maxX, y: maxY} };
+            else return { tool: 'rect', start: {x: minX, y: minY}, end: {x: maxX, y: maxY} };
+        }
+        return null; 
     }
 
     function endPosition() {
         if (!isDrawing || !isDrawingMode) return;
         isDrawing = false;
-        if (currentTool !== 'strokeEraser' && currentPath) {
+        if (currentTool !== 'strokeEraser' && currentTool !== 'text' && currentPath) {
+            
+            if (currentTool === 'autoShape') {
+                let recognized = recognizeShape(currentPath.points);
+                if (recognized) {
+                    currentPath.tool = recognized.tool;
+                    currentPath.start = recognized.start;
+                    currentPath.end = recognized.end;
+                } else {
+                    currentPath.tool = 'free'; 
+                }
+            }
+            
             drawHistory.push(currentPath);
             currentPath = null;
             redrawCanvas();
@@ -814,17 +1012,40 @@
         e.preventDefault();
         const pos = getMousePos(e);
 
-        if (currentTool === 'strokeEraser') {
-            eraseStrokeAt(pos.x, pos.y);
-            return;
-        }
+        if (currentTool === 'strokeEraser') { eraseStrokeAt(pos.x, pos.y); return; }
 
-        if (currentTool === 'free' || currentTool === 'eraser') {
+        if (currentTool === 'free' || currentTool === 'eraser' || currentTool === 'autoShape') {
             currentPath.points.push(pos);
-        } else if (currentTool === 'line' || currentTool === 'rect') {
+        } else {
             currentPath.end = pos;
         }
         redrawCanvas();
+    }
+
+    function showTextInput(x, y) {
+        const input = document.getElementById('textAnnotationInput');
+        const size = document.getElementById('brushSize').value * 4 + 12; 
+        input.style.left = (x / canvas.width * 100) + '%';
+        input.style.top = (y / canvas.height * 100) + '%';
+        input.style.fontSize = size + 'px';
+        input.style.color = document.getElementById('brushColor').value;
+        input.dataset.x = x; input.dataset.y = y;
+        input.style.display = 'block';
+        input.focus();
+    }
+
+    function saveTextAnnotation() {
+        const input = document.getElementById('textAnnotationInput');
+        if (input.style.display === 'none') return;
+        const text = input.value.trim();
+        if (text) {
+            drawHistory.push({
+                tool: 'text', text: text, color: input.style.color,
+                size: parseInt(input.style.fontSize), x: parseFloat(input.dataset.x), y: parseFloat(input.dataset.y)
+            });
+            redrawCanvas();
+        }
+        input.style.display = 'none'; input.value = '';
     }
 
     function redrawCanvas() {
@@ -840,28 +1061,46 @@
     function drawItem(item) {
         ctx.lineWidth = item.size;
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        
         if (item.tool === 'eraser') {
             ctx.globalCompositeOperation = 'destination-out';
             ctx.strokeStyle = 'rgba(0,0,0,1)';
         } else {
             ctx.globalCompositeOperation = 'source-over';
             ctx.strokeStyle = item.color;
+            ctx.fillStyle = item.color;
         }
 
         ctx.beginPath();
-        if (item.tool === 'free' || item.tool === 'eraser') {
+        if (item.tool === 'free' || item.tool === 'eraser' || item.tool === 'autoShape') {
             if (item.points.length === 0) return;
             ctx.moveTo(item.points[0].x, item.points[0].y);
             for (let i = 1; i < item.points.length; i++) ctx.lineTo(item.points[i].x, item.points[i].y);
             ctx.stroke();
         } else if (item.tool === 'line') {
             ctx.moveTo(item.start.x, item.start.y); ctx.lineTo(item.end.x, item.end.y); ctx.stroke();
+        } else if (item.tool === 'arrow') {
+            ctx.moveTo(item.start.x, item.start.y); ctx.lineTo(item.end.x, item.end.y); ctx.stroke();
+            const angle = Math.atan2(item.end.y - item.start.y, item.end.x - item.start.x);
+            const headlen = item.size * 3 + 5;
+            ctx.beginPath();
+            ctx.moveTo(item.end.x, item.end.y);
+            ctx.lineTo(item.end.x - headlen * Math.cos(angle - Math.PI / 6), item.end.y - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(item.end.x, item.end.y);
+            ctx.lineTo(item.end.x - headlen * Math.cos(angle + Math.PI / 6), item.end.y - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.stroke();
         } else if (item.tool === 'rect') {
             ctx.rect(item.start.x, item.start.y, item.end.x - item.start.x, item.end.y - item.start.y); ctx.stroke();
+        } else if (item.tool === 'ellipse') {
+            let w = item.end.x - item.start.x; let h = item.end.y - item.start.y;
+            let cx = item.start.x + w/2; let cy = item.start.y + h/2;
+            ctx.ellipse(cx, cy, Math.abs(w/2), Math.abs(h/2), 0, 0, 2 * Math.PI); ctx.stroke();
+        } else if (item.tool === 'text') {
+            ctx.font = `bold ${item.size}px sans-serif`; ctx.textBaseline = 'top';
+            ctx.fillText(item.text, item.x, item.y);
         }
     }
 
-    // 筆跡消除數學邏輯 (點到線段距離)
     function dist2(v, w) { return Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); }
     function pointToSegmentDist(p, v, w) {
         let l2 = dist2(v, w);
@@ -872,49 +1111,45 @@
     }
 
     function eraseStrokeAt(x, y) {
-        const threshold = 15; // 判定範圍
+        const threshold = 20; 
         for (let i = drawHistory.length - 1; i >= 0; i--) {
             let item = drawHistory[i];
             if (item.tool === 'eraser') continue; 
             let hit = false;
-            if (item.tool === 'free') {
+            if (item.tool === 'free' || item.tool === 'autoShape') {
                 for (let j = 0; j < item.points.length - 1; j++) {
                     if (pointToSegmentDist({x,y}, item.points[j], item.points[j+1]) < threshold) { hit = true; break; }
                 }
-            } else if (item.tool === 'line') {
+            } else if (item.tool === 'line' || item.tool === 'arrow') {
                 if (pointToSegmentDist({x,y}, item.start, item.end) < threshold) hit = true;
             } else if (item.tool === 'rect') {
                 let p1 = item.start, p2 = {x: item.end.x, y: item.start.y}, p3 = item.end, p4 = {x: item.start.x, y: item.end.y};
                 if (pointToSegmentDist({x,y}, p1, p2) < threshold || pointToSegmentDist({x,y}, p2, p3) < threshold ||
                     pointToSegmentDist({x,y}, p3, p4) < threshold || pointToSegmentDist({x,y}, p4, p1) < threshold) hit = true;
+            } else if (item.tool === 'ellipse') {
+                let w = item.end.x - item.start.x; let h = item.end.y - item.start.y;
+                let cx = item.start.x + w/2; let cy = item.start.y + h/2;
+                let rx = Math.abs(w/2); let ry = Math.abs(h/2);
+                let nx = (x - cx) / rx; let ny = (y - cy) / ry;
+                if (Math.abs(nx*nx + ny*ny - 1) < 0.3) hit = true;
+            } else if (item.tool === 'text') {
+                if (x >= item.x && x <= item.x + item.text.length * item.size && y >= item.y && y <= item.y + item.size) hit = true;
             }
-            if (hit) {
-                drawHistory.splice(i, 1);
-                redrawCanvas();
-                return;
-            }
+            
+            if (hit) { drawHistory.splice(i, 1); redrawCanvas(); return; }
         }
     }
 
-    function undo() {
-        if (drawHistory.length > 0) { drawHistory.pop(); redrawCanvas(); }
-    }
-
-    function clearCanvas() {
-        if(confirm("確定要清空所有筆跡嗎？")) {
-            drawHistory = []; baseAnnotationImg = null; redrawCanvas();
-        }
-    }
+    function undo() { if (drawHistory.length > 0) { drawHistory.pop(); redrawCanvas(); } }
+    function clearCanvas() { if(confirm("確定要清空所有筆跡嗎？")) { drawHistory = []; baseAnnotationImg = null; redrawCanvas(); } }
 
     async function saveAnnotation() {
-        const btn = document.querySelector(".save-btn");
+        const btn = document.querySelector("button[onclick='saveAnnotation()']");
         if(btn) btn.innerText = "儲存中...";
         
-        // 檢查畫布是否為空
         const blank = document.createElement('canvas');
         blank.width = canvas.width; blank.height = canvas.height;
         const isBlank = canvas.toDataURL() === blank.toDataURL();
-        
         const base64Image = isBlank ? "" : canvas.toDataURL("image/png");
         
         try {
@@ -922,35 +1157,30 @@
             const item = window.currentItemsMap[currentViewerId];
             item.annotationImage = base64Image;
             
-            // 儲存後，將當前畫面壓平成新的 baseImage，清空 history
             if(base64Image) loadBaseAnnotation(base64Image);
             else { baseAnnotationImg = null; drawHistory = []; redrawCanvas(); }
             
-            alert("筆跡儲存成功！");
-            cancelAnnotation(); 
-        } catch (err) {
-            console.error("儲存筆跡失敗", err); alert("儲存失敗，請重試。");
-        } finally {
-            if(btn) btn.innerText = "💾";
-        }
+            alert("筆跡儲存成功！"); cancelAnnotation(); 
+        } catch (err) { console.error("儲存筆跡失敗", err); alert("儲存失敗，請重試。"); } 
+        finally { if(btn) btn.innerText = "💾"; }
     }
 
     function closeImageViewer() { 
         document.getElementById("imageViewerModal").style.display = "none"; 
         document.getElementById("viewerImage").src = ""; 
+        document.body.classList.remove('modal-open'); 
         cancelAnnotation();
     }
+    
     function zoomImage(delta) { 
-        if(isDrawingMode) return; 
         currentZoom += delta; if (currentZoom < 0.5) currentZoom = 0.5; if (currentZoom > 5) currentZoom = 5; 
-        document.getElementById("viewerImage").style.transform = `scale(${currentZoom})`; 
-        document.getElementById("annotationCanvas").style.transform = `scale(${currentZoom})`; 
+        document.getElementById("imageWrapper").style.transform = `scale(${currentZoom})`; 
     }
     function resetZoom() { 
         currentZoom = 1; 
-        document.getElementById("viewerImage").style.transform = `scale(1)`; 
-        document.getElementById("annotationCanvas").style.transform = `scale(1)`; 
+        document.getElementById("imageWrapper").style.transform = `scale(1)`; 
     }
+    
     function navigateViewer(direction) {
         if (isDrawingMode || filteredSortedItems.length <= 1) return;
         let idx = filteredSortedItems.findIndex(item => item.id === currentViewerId);
@@ -960,24 +1190,138 @@
         if (nextIdx >= filteredSortedItems.length) nextIdx = 0;
         openImageViewer(filteredSortedItems[nextIdx].id);
     }
-    function setupSwipeGestures() {
-        let touchStartX = 0; let touchEndX = 0; const container = document.getElementById("viewerImgContainer");
-        container.addEventListener('touchstart', e => { if(!isDrawingMode) touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-        container.addEventListener('touchend', e => {
-            if(isDrawingMode) return;
-            touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX - touchEndX > 60) navigateViewer(1); else if (touchEndX - touchStartX > 60) navigateViewer(-1);
-        }, { passive: true });
+
+    /* --- 卡片點擊與多選邏輯 (修復回歸) --- */
+    window.toggleExplanation = async function(event, id) {
+        event.stopPropagation(); const box = document.getElementById(`exp-${id}`); const btn = document.getElementById(`btn-exp-${id}`); const item = window.currentItemsMap[id];
+        if (box.style.display === "none" || box.style.display === "") {
+            btn.innerText = "載入中..."; let expSrc = item.explanationImage;
+            if (!expSrc && item.hasExplanation) {
+                if (item.fullExplanationImage) expSrc = item.fullExplanationImage;
+                else {
+                    try {
+                        const imgDoc = await db.collection("question_images").doc(id).get();
+                        if (imgDoc.exists) { expSrc = imgDoc.data().explanationImage; item.fullExplanationImage = expSrc; item.fullImage = imgDoc.data().image; item.fullImageLoaded = true; }
+                    } catch(e) { console.error("詳解載入失敗", e); }
+                }
+            }
+            if (expSrc) { box.innerHTML = `<img class="question-img" src="${expSrc}" alt="詳解" style="border-radius: 4px;">`; box.style.display = "block"; btn.innerText = "隱藏詳解"; } 
+            else { btn.innerText = "無詳解圖片"; }
+        } else { box.style.display = "none"; btn.innerText = "看詳解"; }
     }
 
-    /* --- 智慧 PDF 匯出 (自動疊加筆跡與詳解) --- */
-    async function batchExportSmartPDF() {
+    function handleCardClick(e, id) {
+        const isCheckboxClick = e.target.classList.contains('card-checkbox'); 
+        const isSelectionMode = selectedCardIds.size > 0 || e.shiftKey || isCheckboxClick;
+        
+        if (isSelectionMode) {
+            e.preventDefault(); e.stopPropagation();
+            if (e.shiftKey && lastSelectedId && lastSelectedId !== id) {
+                const activeIds = filteredSortedItems.map(item => item.id); 
+                const startIdx = activeIds.indexOf(lastSelectedId); 
+                const endIdx = activeIds.indexOf(id);
+                if (startIdx !== -1 && endIdx !== -1) {
+                    const min = Math.min(startIdx, endIdx); const max = Math.max(startIdx, endIdx); const targetState = !selectedCardIds.has(id);
+                    for (let i = min; i <= max; i++) { if (targetState) selectedCardIds.add(activeIds[i]); else selectedCardIds.delete(activeIds[i]); }
+                }
+            } else { 
+                if (selectedCardIds.has(id)) selectedCardIds.delete(id); else selectedCardIds.add(id); 
+            }
+            lastSelectedId = id; updateSelectionUI();
+        } else { 
+            openImageViewer(id); 
+        }
+    }
+
+    function handleTouchStart(id) { 
+        pressTimer = window.setTimeout(() => { 
+            if (!selectedCardIds.has(id)) { 
+                selectedCardIds.add(id); lastSelectedId = id; updateSelectionUI(); 
+                if (navigator.vibrate) navigator.vibrate(50); 
+            } 
+        }, 600); 
+    }
+    function handleTouchCancel() { window.clearTimeout(pressTimer); }
+
+    function updateSelectionUI() {
+        document.querySelectorAll(".question-card").forEach(card => { 
+            const id = card.getAttribute("data-id"); 
+            if (selectedCardIds.has(id)) card.classList.add("selected"); else card.classList.remove("selected"); 
+        });
+        const bar = document.getElementById("batchFloatingBar"); const countSpan = document.getElementById("batchSelectCount");
+        if (selectedCardIds.size > 0) { countSpan.innerText = selectedCardIds.size; bar.classList.add("active"); } else { bar.classList.remove("active"); }
+    }
+
+    function cancelSelection() { selectedCardIds.clear(); lastSelectedId = null; updateSelectionUI(); }
+
+    async function batchDelete() {
+        if (selectedCardIds.size === 0) return; if (!confirm(`確定要永久刪除這 ${selectedCardIds.size} 題錯題嗎？`)) return;
+        const batch = db.batch(); selectedCardIds.forEach(id => { batch.delete(db.collection("questions").doc(id)); batch.delete(db.collection("question_images").doc(id)); });
+        try { await batch.commit(); cancelSelection(); } catch (err) { alert("批量刪除失敗：" + err.message); }
+    }
+
+    /* --- 匯出試卷 Modal --- */
+    function openExportModal() { document.getElementById('exportModal').style.display = 'block'; }
+    function closeExportModal() { document.getElementById('exportModal').style.display = 'none'; }
+
+    /* --- 智慧 PDF 匯出 (自動合併同源照片與防卡死機制) --- */
+    
+    // 核心修復：移除強制縮小，保留最高畫質原圖
+    async function mergeImagesToBase64(baseSrc, annoSrcs) {
+        return new Promise((resolve) => {
+            const validAnnos = annoSrcs.filter(src => src && src.trim() !== "");
+            
+            // 如果沒有標註，直接回傳原圖，保證 100% 無損畫質
+            if (validAnnos.length === 0) { 
+                resolve(baseSrc);
+                return; 
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            const img = new Image();
+            img.onload = () => {
+                // 使用原圖尺寸，不進行任何壓縮
+                canvas.width = img.width; 
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                let loadedCount = 0;
+                validAnnos.forEach(src => {
+                    const annoImg = new Image();
+                    annoImg.onload = () => {
+                        ctx.drawImage(annoImg, 0, 0, canvas.width, canvas.height);
+                        loadedCount++;
+                        if (loadedCount === validAnnos.length) {
+                            resolve(canvas.toDataURL('image/jpeg', 0.95));
+                        }
+                    };
+                    annoImg.onerror = () => {
+                        loadedCount++;
+                        if (loadedCount === validAnnos.length) {
+                            resolve(canvas.toDataURL('image/jpeg', 0.95));
+                        }
+                    };
+                    annoImg.src = src;
+                });
+            };
+            img.onerror = () => resolve(baseSrc);
+            img.src = baseSrc;
+        });
+    }
+
+    async function batchExportPDF(mode, btn) {
         if (selectedCardIds.size === 0) return;
-        const btn = document.querySelector(".btn-batch-primary");
+        
+        const allBtns = document.querySelectorAll('#exportModal button');
+        allBtns.forEach(b => b.disabled = true);
+        
         const originalText = btn.innerText;
-        btn.innerText = "⏳ 產生試卷與詳解中...";
+        btn.innerText = "⏳ 產生中...";
 
         try {
+            const imageMap = new Map();
             for (let id of selectedCardIds) {
                 const item = window.currentItemsMap[id];
                 if (!item.fullImageLoaded) {
@@ -989,80 +1333,171 @@
                         item.fullImageLoaded = true;
                     }
                 }
+                const imgKey = item.fullImage || item.image || item.thumbnail || "no_image_" + id;
+                if (!imageMap.has(imgKey)) imageMap.set(imgKey, []);
+                imageMap.get(imgKey).push(item);
             }
 
             let contentHtml = `
             <div style="padding: 15px; background-color: #ffffff; color: #000000; font-family: sans-serif;">
                 <h2 style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 30px; font-size: 24px;">
-                    學測錯題實戰卷
+                    ${mode === 'guide' ? '學測錯題精華講義' : '學測錯題實戰卷'}
                 </h2>
             `;
 
             let questionCounter = 1;
-            for (let id of selectedCardIds) {
-                const item = window.currentItemsMap[id];
-                const imgSrc = item.fullImage || item.image || item.thumbnail || "";
-                const annoSrc = item.annotationImage || "";
-                
-                contentHtml += `
-                    <div style="page-break-inside: avoid; margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px dashed #cccccc;">
-                        <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
-                            Q${questionCounter}. 【${item.subject}】${item.concept} <span style="font-size:12px; color:#666;">(${item.unit})</span>
-                        </div>
-                        <div style="position: relative; display: inline-block; margin-top: 10px; max-width: 100%;">
-                            <img src="${imgSrc}" style="max-width: 100%; max-height: 400px; display: block; object-fit: contain;" />
-                            ${annoSrc ? `<img src="${annoSrc}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none;" />` : ''}
-                        </div>
-                    </div>
-                `;
-                questionCounter++;
-            }
+            const imagesToPreload = new Set(); // 收集所有要預先解碼的圖片
 
-            contentHtml += `
-                <div style="page-break-before: always;">
-                    <h2 style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 30px; font-size: 24px;">
-                        解答與解析
-                    </h2>
-            `;
-
-            questionCounter = 1;
-            for (let id of selectedCardIds) {
-                const item = window.currentItemsMap[id];
-                const expImgSrc = item.fullExplanationImage || item.explanationImage;
-                const hasNotes = item.notes && item.notes.trim() !== "";
-                
-                if (expImgSrc || hasNotes) {
-                    contentHtml += `
-                        <div style="page-break-inside: avoid; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-                            <div style="font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #333;">
-                                Q${questionCounter} 解析：
+            if (mode === 'guide') {
+                for (let [imgKey, items] of imageMap.entries()) {
+                    let headersHtml = '';
+                    items.forEach((item, idx) => {
+                        const tagsStr = (item.tags && item.tags.length > 0) ? item.tags.join('、') : '';
+                        const hasNotes = item.notes && item.notes.trim() !== "";
+                        headersHtml += `
+                            <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #111;">
+                                Q${questionCounter + idx}. 【${item.subject}】${item.concept} <span style="font-size:12px; color:#666;">(${item.unit})</span>
                             </div>
-                            ${hasNotes ? `<div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 8px; border-left: 3px solid #6366f1; margin-bottom: 10px;">備註: ${item.notes}</div>` : ''}
-                            ${expImgSrc ? `<img src="${expImgSrc}" style="max-width: 100%; max-height: 300px; display: block; object-fit: contain;" />` : ''}
-                        </div>
-                    `;
-                } else {
+                            <div style="margin-bottom: 15px; padding: 10px; background-color: #f8fafc; border-left: 4px solid #6366f1; border-radius: 4px;">
+                                ${tagsStr ? `<div style="font-size: 12px; color: #6366f1; font-weight: bold; margin-bottom: 4px;">🏷️ 標籤：${tagsStr}</div>` : ''}
+                                ${hasNotes ? `<div style="font-size: 14px; color: #334155;">📝 備註：${item.notes}</div>` : '<div style="font-size: 14px; color: #94a3b8;">無備註</div>'}
+                            </div>
+                        `;
+                    });
+
+                    const annoSrcs = items.map(i => i.annotationImage);
+                    const mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                    imagesToPreload.add(mergedImgSrc);
+
+                    // 核心修復：使用 display: block; margin: 0 auto; 避免 html2canvas 算錯高度
                     contentHtml += `
-                        <div style="page-break-inside: avoid; margin-bottom: 20px;">
-                            <div style="font-size: 14px; color: #666;">Q${questionCounter}：無提供解析或備註。</div>
+                        <div style="page-break-inside: avoid; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eee;">
+                            ${headersHtml}
+                            <div style="margin-top: 10px; width: 100%;">
+                                <img src="${mergedImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" />
+                            </div>
+                    `;
+
+                    const expMap = new Set();
+                    for (let idx = 0; idx < items.length; idx++) {
+                        const item = items[idx];
+                        const expImgSrc = item.fullExplanationImage || item.explanationImage;
+                        if (expImgSrc && !expMap.has(expImgSrc)) {
+                            expMap.add(expImgSrc);
+                            imagesToPreload.add(expImgSrc);
+                            contentHtml += `
+                            <div style="margin-top: 15px;">
+                                <div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>
+                                <div style="width: 100%;">
+                                    <img src="${expImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" />
+                                </div>
+                            </div>`;
+                        }
+                    }
+                    contentHtml += `</div>`;
+                    questionCounter += items.length;
+                }
+            } else {
+                for (let [imgKey, items] of imageMap.entries()) {
+                    let headersHtml = '';
+                    items.forEach((item, idx) => {
+                        headersHtml += `
+                            <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+                                Q${questionCounter + idx}. 【${item.subject}】${item.concept} <span style="font-size:12px; color:#666;">(${item.unit})</span>
+                            </div>
+                        `;
+                    });
+
+                    const annoSrcs = items.map(i => i.annotationImage);
+                    const mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                    imagesToPreload.add(mergedImgSrc);
+
+                    contentHtml += `
+                        <div style="page-break-inside: avoid; margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px dashed #cccccc;">
+                            ${headersHtml}
+                            <div style="margin-top: 10px; width: 100%;">
+                                <img src="${mergedImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" />
+                            </div>
                         </div>
                     `;
+                    questionCounter += items.length;
                 }
-                questionCounter++;
+
+                contentHtml += `
+                    <div style="page-break-before: always;">
+                        <h2 style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 30px; font-size: 24px;">
+                            解答與解析
+                        </h2>
+                `;
+
+                questionCounter = 1;
+                for (let [imgKey, items] of imageMap.entries()) {
+                    for (let idx = 0; idx < items.length; idx++) {
+                        const item = items[idx];
+                        const expImgSrc = item.fullExplanationImage || item.explanationImage;
+                        const hasNotes = item.notes && item.notes.trim() !== "";
+                        
+                        if (expImgSrc || hasNotes) {
+                            let expHtml = '';
+                            if (expImgSrc) {
+                                imagesToPreload.add(expImgSrc);
+                                expHtml = `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" /></div>`;
+                            }
+                            contentHtml += `
+                                <div style="page-break-inside: avoid; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                                    <div style="font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #333;">
+                                        Q${questionCounter + idx} 解析：
+                                    </div>
+                                    ${hasNotes ? `<div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 8px; border-left: 3px solid #6366f1; margin-bottom: 10px;">備註: ${item.notes}</div>` : ''}
+                                    ${expHtml}
+                                </div>
+                            `;
+                        } else {
+                            contentHtml += `
+                                <div style="page-break-inside: avoid; margin-bottom: 20px;">
+                                    <div style="font-size: 14px; color: #666;">Q${questionCounter + idx}：無提供解析或備註。</div>
+                                </div>
+                            `;
+                        }
+                    }
+                    questionCounter += items.length;
+                }
             }
 
-            contentHtml += `</div></div>`; 
+            contentHtml += `</div>`; 
 
+            // 核心修復：強制瀏覽器在背景「預先解碼」所有圖片，確保 html2canvas 截圖時圖片 100% 完整
+            btn.innerText = "⏳ 載入圖片中...";
+            const preloadPromises = Array.from(imagesToPreload).map(src => {
+                return new Promise((resolve) => {
+                    if (!src) return resolve();
+                    const img = new Image();
+                    img.onload = async () => {
+                        try { await img.decode(); } catch(e) {} // 強制解碼進記憶體
+                        resolve();
+                    };
+                    img.onerror = resolve;
+                    img.src = src;
+                });
+            });
+            await Promise.all(preloadPromises);
+            
+            // 給予瀏覽器一點點時間確認快取
+            await new Promise(r => setTimeout(r, 150));
+
+            btn.innerText = "⏳ 產生 PDF 中...";
             const opt = {
                 margin:       15,
-                filename:     '學測錯題實戰卷_附詳解.pdf',
+                filename:     mode === 'guide' ? '學測錯題精華講義.pdf' : '學測錯題實戰卷.pdf',
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
             };
 
             await html2pdf().set(opt).from(contentHtml).save();
+            
+            closeExportModal();
             cancelSelection();
 
         } catch (err) {
@@ -1070,7 +1505,86 @@
             alert("PDF匯出失敗，請重試。");
         } finally {
             btn.innerText = originalText;
+            allBtns.forEach(b => b.disabled = false);
         }
+    }
+
+    /* --- 匯出 Word --- */
+    async function batchExportWord(btn) {
+        if (selectedCardIds.size === 0) return;
+        
+        const allBtns = document.querySelectorAll('#exportModal button');
+        allBtns.forEach(b => b.disabled = true);
+        
+        const originalText = btn.innerText;
+        btn.innerText = "⏳ 產生中...";
+
+        try {
+            const imageMap = new Map();
+            for (let id of selectedCardIds) {
+                const item = window.currentItemsMap[id];
+                if (!item.fullImageLoaded) {
+                    const imgDoc = await db.collection("question_images").doc(id).get();
+                    if (imgDoc.exists) {
+                        item.fullImage = imgDoc.data().image;
+                        item.fullExplanationImage = imgDoc.data().explanationImage;
+                        item.annotationImage = imgDoc.data().annotationImage || "";
+                        item.fullImageLoaded = true;
+                    }
+                }
+                // 完美相容舊資料：加入 item.image 判斷
+                const imgKey = item.fullImage || item.image || item.thumbnail || "no_image_" + id;
+                if (!imageMap.has(imgKey)) imageMap.set(imgKey, []);
+                imageMap.get(imgKey).push(item);
+            }
+
+            let contentHtml = "";
+            for (let [imgKey, items] of imageMap.entries()) {
+                let headersHtml = '';
+                items.forEach(item => {
+                    headersHtml += `<h3 style="color: #333; margin-bottom: 5px; font-family: sans-serif;">【${item.subject}】${item.unit} - ${item.concept}</h3>`;
+                    if (item.notes) headersHtml += `<p style="color: #555; font-size: 14px; margin-bottom: 10px; font-family: sans-serif;">備註: ${item.notes}</p>`;
+                });
+
+                const annoSrcs = items.map(i => i.annotationImage);
+                const mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+
+                contentHtml += `
+                    <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #ccc;">
+                        ${headersHtml}
+                        <p><img src="${mergedImgSrc}" style="max-width: 600px; width: 100%; height: auto;" /></p><br><br>
+                    </div>
+                `;
+            }
+
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>學測錯題實戰卷</title></head><body>";
+            const footer = "</body></html>"; const sourceHTML = header + contentHtml + footer;
+            const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const fileDownload = document.createElement("a");
+            fileDownload.href = url; fileDownload.download = '學測錯題實戰卷.doc'; document.body.appendChild(fileDownload); fileDownload.click();
+            
+            setTimeout(() => { 
+                document.body.removeChild(fileDownload); 
+                URL.revokeObjectURL(url); 
+                closeExportModal();
+                cancelSelection(); 
+            }, 500);
+        } catch (err) {
+            console.error("Word 匯出錯誤:", err);
+            alert("Word匯出失敗，請重試。");
+        } finally {
+            btn.innerText = originalText;
+            allBtns.forEach(b => b.disabled = false);
+        }
+    }
+
+    function setupSwipeGestures() {
+        let touchStartX = 0; let touchEndX = 0; const container = document.getElementById("viewerImgContainer");
+        container.addEventListener('touchstart', e => { if(!isDrawingMode) touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+        container.addEventListener('touchend', e => {
+            if(isDrawingMode) return;
+            touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 60) navigateViewer(1); else if (touchEndX - touchStartX > 60) navigateViewer(-1);
+        }, { passive: true });
     }
 
     /* --- 隨機特訓產生器 --- */
@@ -1289,75 +1803,6 @@
         finally { submitBtn.disabled = false; submitBtn.innerText = "全部儲存並上傳"; }
     }
 
-    /* --- 其他輔助功能 (多選、展開詳解等) --- */
-    window.toggleExplanation = async function(event, id) {
-        event.stopPropagation(); const box = document.getElementById(`exp-${id}`); const btn = document.getElementById(`btn-exp-${id}`); const item = window.currentItemsMap[id];
-        if (box.style.display === "none" || box.style.display === "") {
-            btn.innerText = "載入中..."; let expSrc = item.explanationImage;
-            if (!expSrc && item.hasExplanation) {
-                if (item.fullExplanationImage) expSrc = item.fullExplanationImage;
-                else {
-                    try {
-                        const imgDoc = await db.collection("question_images").doc(id).get();
-                        if (imgDoc.exists) { expSrc = imgDoc.data().explanationImage; item.fullExplanationImage = expSrc; item.fullImage = imgDoc.data().image; item.fullImageLoaded = true; }
-                    } catch(e) { console.error("詳解載入失敗", e); }
-                }
-            }
-            if (expSrc) { box.innerHTML = `<img class="question-img" src="${expSrc}" alt="詳解" style="border-radius: 4px;">`; box.style.display = "block"; btn.innerText = "隱藏詳解"; } 
-            else { btn.innerText = "無詳解圖片"; }
-        } else { box.style.display = "none"; btn.innerText = "看詳解"; }
-    }
-    function handleCardClick(e, id) {
-        const isCheckboxClick = e.target.classList.contains('card-checkbox'); const isSelectionMode = selectedCardIds.size > 0 || e.shiftKey || isCheckboxClick;
-        if (isSelectionMode) {
-            e.preventDefault(); e.stopPropagation();
-            if (e.shiftKey && lastSelectedId && lastSelectedId !== id) {
-                const activeIds = filteredSortedItems.map(item => item.id); const startIdx = activeIds.indexOf(lastSelectedId); const endIdx = activeIds.indexOf(id);
-                if (startIdx !== -1 && endIdx !== -1) {
-                    const min = Math.min(startIdx, endIdx); const max = Math.max(startIdx, endIdx); const targetState = !selectedCardIds.has(id);
-                    for (let i = min; i <= max; i++) { if (targetState) selectedCardIds.add(activeIds[i]); else selectedCardIds.delete(activeIds[i]); }
-                }
-            } else { if (selectedCardIds.has(id)) selectedCardIds.delete(id); else selectedCardIds.add(id); }
-            lastSelectedId = id; updateSelectionUI();
-        } else { openImageViewer(id); }
-    }
-    function handleTouchStart(id) { pressTimer = window.setTimeout(() => { if (!selectedCardIds.has(id)) { selectedCardIds.add(id); lastSelectedId = id; updateSelectionUI(); if (navigator.vibrate) navigator.vibrate(50); } }, 600); }
-    function handleTouchCancel() { window.clearTimeout(pressTimer); }
-    function updateSelectionUI() {
-        document.querySelectorAll(".question-card").forEach(card => { const id = card.getAttribute("data-id"); if (selectedCardIds.has(id)) card.classList.add("selected"); else card.classList.remove("selected"); });
-        const bar = document.getElementById("batchFloatingBar"); const countSpan = document.getElementById("batchSelectCount");
-        if (selectedCardIds.size > 0) { countSpan.innerText = selectedCardIds.size; bar.classList.add("active"); } else { bar.classList.remove("active"); }
-    }
-    function cancelSelection() { selectedCardIds.clear(); lastSelectedId = null; updateSelectionUI(); }
-    async function batchDelete() {
-        if (selectedCardIds.size === 0) return; if (!confirm(`確定要永久刪除這 ${selectedCardIds.size} 題錯題嗎？`)) return;
-        const batch = db.batch(); selectedCardIds.forEach(id => { batch.delete(db.collection("questions").doc(id)); batch.delete(db.collection("question_images").doc(id)); });
-        try { await batch.commit(); cancelSelection(); } catch (err) { alert("批量刪除失敗：" + err.message); }
-    }
-    async function batchExportWord() {
-        if (selectedCardIds.size === 0) return; const btn = document.querySelectorAll(".btn-batch-secondary")[0]; const originalText = btn.innerText; btn.innerText = "⏳ 產生中...";
-        let contentHtml = "";
-        for (let id of selectedCardIds) {
-            const item = window.currentItemsMap[id]; let imgSrc = item.image;
-            if (!imgSrc) {
-                if (item.fullImageLoaded) imgSrc = item.fullImage;
-                else { try { const imgDoc = await db.collection("question_images").doc(id).get(); if (imgDoc.exists) { imgSrc = imgDoc.data().image; item.fullImage = imgSrc; item.fullImageLoaded = true; } } catch(e) {} }
-            }
-            const finalImgSrc = imgSrc || item.thumbnail || "";
-            contentHtml += `
-                <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #ccc;">
-                    <h3 style="color: #333; margin-bottom: 5px; font-family: sans-serif;">【${item.subject}】${item.unit} - ${item.concept}</h3>
-                    ${item.notes ? `<p style="color: #555; font-size: 14px; margin-bottom: 10px; font-family: sans-serif;">備註: ${item.notes}</p>` : ''}
-                    <p><img src="${finalImgSrc}" style="max-width: 600px; width: 100%; height: auto;" /></p><br><br>
-                </div>
-            `;
-        }
-        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>學測錯題實戰卷</title></head><body>";
-        const footer = "</body></html>"; const sourceHTML = header + contentHtml + footer;
-        const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const fileDownload = document.createElement("a");
-        fileDownload.href = url; fileDownload.download = '學測錯題實戰卷.doc'; document.body.appendChild(fileDownload); fileDownload.click();
-        setTimeout(() => { document.body.removeChild(fileDownload); URL.revokeObjectURL(url); btn.innerText = originalText; cancelSelection(); }, 500);
-    }
     function updateAIPrompt(items) {
         const unitSet = new Set(); const conceptSet = new Set();
         items.forEach(item => { if (item.unit) unitSet.add(item.unit); if (item.concept) conceptSet.add(item.concept); });
@@ -1366,6 +1811,10 @@
 如果上傳多張照片，請務必在每行開頭加上「[照片X]」。
 請針對「每一道題」單獨輸出一行格式如下（以半形逗號隔開），不要額外解釋或引言：
 [照片X] 科目,單元名稱,核心觀念,題型,題號備註
+
+【特殊規則】
+* 如果是一整個「題組」（例如閱讀測驗、圖表題），請將該題組的錯題「合併為一行」輸出。
+* 題號備註請寫在一起（例如：第45-48題），觀念寫該大題的核心觀念即可，避免產生過多重複照片。
 
 【限制清單】
 * 欄位 1 (科目)：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
