@@ -9,6 +9,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
     <!-- 引入 html2pdf.js 用於直接下載 PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- 引入 marked.js 用於解析 Markdown 語法 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
         /* --- 現代化暗色主題色票 --- */
@@ -88,13 +90,23 @@
         .question-card.selected .card-checkbox { background-color: var(--accent-color); border-color: var(--accent-color); }
         .question-card.selected .card-checkbox::after { content: "✓"; color: white; font-size: 14px; font-weight: bold; }
 
-        .question-img-container { width: 100%; height: 150px; background-color: #000; position: relative; }
+        .question-img-container { width: 100%; height: 150px; background-color: #0f172a; position: relative; }
         .question-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: opacity 0.2s; }
         .question-card:hover .question-img { opacity: 1; }
+        
+        /* 純文字題目的預覽樣式 */
+        .text-preview-container {
+            width: 100%; height: 100%; padding: 15px; box-sizing: border-box; overflow: hidden; position: relative;
+            color: #cbd5e1; font-size: 13px; line-height: 1.6; text-align: left; background-color: #1e293b;
+        }
+        .text-preview-container::after {
+            content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 50px;
+            background: linear-gradient(transparent, #1e293b);
+        }
 
         .tag-subject-absolute {
             position: absolute; top: 10px; right: 10px; background-color: rgba(15, 23, 42, 0.8); color: white;
-            padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);
+            padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); z-index: 5;
         }
 
         .question-details { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
@@ -110,7 +122,15 @@
         .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border-color); }
         .btn-toggle-exp { background: none; color: var(--accent-color); border: none; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px; }
         .btn-toggle-exp:hover { text-decoration: underline; }
-        .explanation-img-box { display: none; margin-top: 10px; background-color: #000; border-radius: 6px; overflow: hidden; }
+        .explanation-img-box { display: none; margin-top: 10px; background-color: #0f172a; border-radius: 6px; overflow: hidden; }
+
+        /* --- Markdown 渲染樣式 --- */
+        .markdown-body { font-family: inherit; line-height: 1.6; font-size: 14px; color: #f8fafc; }
+        .markdown-body p { margin-top: 0; margin-bottom: 10px; }
+        .markdown-body strong { color: var(--accent-color); font-weight: 700; }
+        .markdown-body blockquote { border-left: 4px solid var(--border-color); padding-left: 12px; margin-left: 0; color: var(--text-muted); background: rgba(255,255,255,0.05); padding-top: 8px; padding-bottom: 8px; border-radius: 0 4px 4px 0; }
+        .markdown-body ul, .markdown-body ol { margin-top: 0; padding-left: 20px; margin-bottom: 10px; }
+        .markdown-body code { background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
 
         /* --- 批量操作浮動工具列 --- */
         .batch-floating-bar {
@@ -155,7 +175,6 @@
         .draw-tools-floating.vertical { flex-direction: column; gap: 12px; width: 44px; }
         .draw-tools-floating.vertical .tool-group { flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.1); border-right: none; padding-bottom: 10px; padding-right: 0; }
         
-        /* 橫向工具列自動換行，避免手機版超出螢幕 */
         .draw-tools-floating.horizontal { flex-direction: row; gap: 12px; height: auto; min-height: 44px; align-items: center; flex-wrap: wrap; max-width: 90vw; justify-content: center; }
         .draw-tools-floating.horizontal .tool-group { flex-direction: row; border-right: 1px solid rgba(255,255,255,0.1); border-bottom: none; padding-right: 10px; padding-bottom: 0; flex-wrap: wrap; justify-content: center; }
         
@@ -174,7 +193,6 @@
         .tool-btn:hover { background: rgba(255,255,255,0.1); }
         .tool-btn.active { background: var(--accent-color); }
         
-        /* 懸浮提示 Tooltip */
         .tool-btn::after {
             content: attr(data-tooltip); position: absolute; background: #000; color: #fff; padding: 4px 8px; border-radius: 4px;
             font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 2400;
@@ -183,7 +201,6 @@
         .vertical .tool-btn::after { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 10px; }
         .horizontal .tool-btn::after { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; }
 
-        /* 橡皮擦子選單 */
         .eraser-menu {
             display: none; position: absolute; background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 12px; padding: 5px; gap: 5px; z-index: 2500; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
@@ -202,8 +219,14 @@
         .viewer-prev-btn { left: 20px; } .viewer-next-btn { right: 20px; }
         
         /* 圖片與畫布容器 (支援縮放) */
-        .viewer-img-container { flex-grow: 1; overflow: hidden; text-align: center; padding: 20px; display: flex; align-items: center; justify-content: center; position: relative; touch-action: none; }
-        .image-wrapper { position: relative; display: inline-block; transform-origin: center center; }
+        .viewer-img-container { flex-grow: 1; overflow: auto; text-align: center; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; touch-action: none; }
+        
+        .viewer-text-question {
+            background: #1e293b; padding: 20px; border-radius: 8px; color: #f8fafc; text-align: left; 
+            width: 100%; max-width: 800px; margin: 0 auto 20px auto; border: 1px solid #334155; box-sizing: border-box;
+        }
+
+        .image-wrapper { position: relative; display: inline-block; transform-origin: center center; margin: 0 auto; }
         #viewerImage { display: block; max-width: 90vw; max-height: 85vh; width: auto; height: auto; opacity: 0.5; border-radius: 8px; pointer-events: none; }
         #annotationCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 3; cursor: crosshair; touch-action: none; border-radius: 8px; }
         
@@ -242,13 +265,15 @@
         
         .prompt-box, .import-box { background-color: var(--card-bg); border: 1px dashed var(--border-color); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .prompt-box textarea, .import-box textarea { width: 100%; background: #0f172a; color: var(--text-muted); border: 1px solid var(--border-color); padding: 10px; border-radius:6px; }
-        .upload-trigger { display: block; width: 100%; background: rgba(99, 102, 241, 0.05); border: 2px dashed var(--accent-color); padding: 30px 10px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 20px; }
+        .upload-trigger { display: block; width: 100%; background: rgba(99, 102, 241, 0.05); border: 2px dashed var(--accent-color); padding: 30px 10px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 20px; transition: background 0.2s; }
+        .upload-trigger:hover { background: rgba(99, 102, 241, 0.1); }
         .upload-trigger input { display: none; }
-        .queue-item { display: flex; gap: 15px; background: var(--card-bg); padding: 15px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 15px; }
-        .queue-img-wrap { width: 200px; flex-shrink: 0; }
-        .queue-img-preview { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
-        .queue-inputs { flex-grow: 1; display: flex; flex-direction: column; gap: 10px; }
-        .queue-inputs textarea, .queue-inputs input { width: 100%; background: #0f172a; border: 1px solid var(--border-color); color: var(--text-main); padding: 10px; border-radius: 6px; }
+        
+        .queue-item { display: flex; gap: 15px; background: var(--card-bg); padding: 15px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .queue-img-wrap { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+        .queue-img-preview { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); }
+        .queue-inputs { flex-grow: 1; min-width: 250px; display: flex; flex-direction: column; gap: 10px; }
+        .queue-inputs textarea, .queue-inputs input[type="text"] { width: 100%; background: #0f172a; border: 1px solid var(--border-color); color: var(--text-main); padding: 10px; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         
         .setting-group { margin-bottom: 15px; }
         .setting-group label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-muted); }
@@ -339,26 +364,46 @@
     </div>
 </div>
 
-<!-- 批次新增錯題 Modal -->
+<!-- 批次新增錯題 Modal (全新 All-in-One 介面) -->
 <div id="addModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal()">&times;</span>
-        <h2 style="margin-top:0; border-bottom:1px solid var(--border-color); padding-bottom:15px;">批次新增錯題</h2>
+        <h2 style="margin-top:0; border-bottom:1px solid var(--border-color); padding-bottom:15px;">✨ 智能新增錯題</h2>
+        
         <div class="prompt-box">
-            <label style="color:var(--success-color); font-weight:bold;">1. 獲取專屬 AI 指令</label>
-            <textarea id="aiPromptText" rows="3" readonly></textarea>
-            <button class="btn-nav btn-secondary" style="width:100%; justify-content:center; margin-top:10px;" onclick="copyPrompt()">📋 一鍵複製指令給 AI</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label style="color:var(--success-color); font-weight:bold; font-size: 15px;">1. 獲取專屬 AI 指令</label>
+            </div>
+            
+            <!-- 雙指令切換按鈕 -->
+            <div class="prompt-tabs" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button id="btnPromptText" class="btn-nav btn-primary" style="flex: 1; justify-content: center;" onclick="switchPromptMode('text')">📝 純文字模式</button>
+                <button id="btnPromptImg" class="btn-nav btn-secondary" style="flex: 1; justify-content: center;" onclick="switchPromptMode('image')">🖼️ 保留圖片模式</button>
+            </div>
+            
+            <p id="promptDesc" style="font-size: 12px; color: var(--text-muted); margin-top: 0; margin-bottom: 8px;">💡 適合國、英、史、地等，AI 會幫你打出完整題目文字。</p>
+            <textarea id="aiPromptText" rows="3" readonly style="font-size: 12px;"></textarea>
+            <button id="btnCopyPrompt" class="btn-nav btn-secondary" style="width:100%; justify-content:center; margin-top:10px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; transition: all 0.2s;" onclick="copyPrompt()">📋 一鍵複製指令</button>
         </div>
+        
+        <div class="import-box">
+            <label style="color:var(--success-color); font-weight:bold; font-size: 15px;">2. 貼上 AI 回傳的完整內容 (自動生成題目)</label>
+            <textarea id="masterAiImport" rows="6" placeholder="請將 AI 回傳的 [錯題]... 內容整坨貼在這裡"></textarea>
+            <button class="btn-nav btn-primary" style="width:100%; justify-content:center; margin-top:10px; font-size: 15px;" onclick="parseSmartImport()">⚡ 一鍵智能解析</button>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0; color: var(--text-muted); font-size: 14px; position: relative;">
+            <span style="background: var(--bg-color); padding: 0 10px; position: relative; z-index: 1;">——— 或 ———</span>
+            <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border-color); z-index: 0;"></div>
+        </div>
+
         <label class="upload-trigger">
-            <span style="font-size:16px; font-weight: 600; color:var(--text-main);">📁 點擊選取題目照片 (支援多選)</span>
+            <span style="font-size:16px; font-weight: 600; color:var(--text-main);">📁 直接選取照片手動建立 (支援多選)</span>
             <input type="file" id="multiPhotoInput" accept="image/*" multiple onchange="handleFilesSelect(event)">
         </label>
-        <div class="import-box" id="masterImportSection" style="display:none;">
-            <label style="color:var(--success-color); font-weight:bold;">3. 貼入所有照片的 AI 解析</label>
-            <textarea id="masterAiImport" rows="5" oninput="distributeMasterAi()"></textarea>
-        </div>
+
         <div id="queueContainer"></div>
-        <button id="submitAllBtn" class="btn-nav btn-primary" style="display:none; width:100%; justify-content:center; padding:15px; font-size:16px;" onclick="saveAllQuestions()">全部儲存並上傳</button>
+        <button id="submitAllBtn" class="btn-nav btn-primary" style="display:none; width:100%; justify-content:center; padding:15px; font-size:16px; margin-top: 20px;" onclick="saveAllQuestions()">全部儲存並上傳</button>
     </div>
 </div>
 
@@ -431,6 +476,9 @@
         </div>
         
         <div class="viewer-img-container" id="viewerImgContainer">
+            <!-- 純文字題目顯示區 -->
+            <div id="viewerTextQuestion" class="viewer-text-question markdown-body" style="display:none;"></div>
+            
             <div class="image-wrapper" id="imageWrapper">
                 <img id="viewerImage" src="" alt="放大圖片">
                 <canvas id="annotationCanvas"></canvas>
@@ -488,6 +536,11 @@
     let pressTimer;
     let chartExpanded = false;
 
+    // --- 雙指令模式變數 ---
+    let promptTextMode = "";
+    let promptImageMode = "";
+    let currentPromptMode = "text";
+
     const tagColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
     function getTagColor(tag) {
         let hash = 0;
@@ -497,7 +550,7 @@
 
     window.onload = function() {
         loadQuestions();
-        setupAdvancedGestures(); // 替換為進階手勢偵測
+        setupAdvancedGestures(); 
         setupCanvas();
         setupDraggableToolbar();
         window.addEventListener("resize", function() {
@@ -556,7 +609,7 @@
             if (filterSub !== "全部" && item.subject !== filterSub) return false;
             if (filterTag !== "全部" && !item.tags.includes(filterTag)) return false;
             if (searchQuery) {
-                const textToSearch = `${item.subject} ${item.unit} ${item.concept} ${item.notes || ''} ${(item.tags||[]).join(' ')}`.toLowerCase();
+                const textToSearch = `${item.subject} ${item.unit} ${item.concept} ${item.notes || ''} ${(item.tags||[]).join(' ')} ${item.questionText || ''}`.toLowerCase();
                 if (!textToSearch.includes(searchQuery)) return false;
             }
             return true;
@@ -576,7 +629,7 @@
             listContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 50px; color: var(--text-muted);">沒有符合條件的題目</div>`;
         } else {
             filteredSortedItems.forEach(item => {
-                const hasExplanation = item.hasExplanation || (item.explanationImage && item.explanationImage.trim().length > 0);
+                const hasExplanation = item.hasExplanation || (item.explanationImage && item.explanationImage.trim().length > 0) || (item.explanationText && item.explanationText.trim().length > 0);
                 const displayImgSrc = item.thumbnail || item.image || "";
                 
                 let tagsHtml = "";
@@ -586,6 +639,18 @@
                             const color = getTagColor(t);
                             return `<span class="custom-tag" style="background-color: ${color}20; color: ${color}; border: 1px solid ${color}40;">🏷️ ${t}</span>`;
                         }).join('') + `</div>`;
+                }
+
+                // 判斷要顯示圖片還是純文字預覽
+                let imgHtml = '';
+                if (displayImgSrc) {
+                    imgHtml = `<img class="question-img" src="${displayImgSrc}" alt="錯題縮圖">`;
+                } else if (item.questionText) {
+                    // 移除 Markdown 符號作為純文字預覽
+                    const plainText = item.questionText.replace(/[#*`>]/g, '').substring(0, 80) + '...';
+                    imgHtml = `<div class="text-preview-container">${plainText}</div>`;
+                } else {
+                    imgHtml = `<div class="text-preview-container" style="text-align:center; line-height:120px;">無題目內容</div>`;
                 }
 
                 const card = document.createElement("div");
@@ -601,7 +666,7 @@
                     <div class="card-checkbox"></div>
                     <div class="question-img-container">
                         <span class="tag-subject-absolute">${item.subject}</span>
-                        <img class="question-img" src="${displayImgSrc}" alt="錯題縮圖">
+                        ${imgHtml}
                     </div>
                     <div class="question-details">
                         ${tagsHtml}
@@ -638,7 +703,7 @@
 
     async function openImageViewer(id) {
         currentViewerId = id; 
-        resetZoom(); // 開啟時重設縮放與平移
+        resetZoom(); 
         cancelAnnotation(); 
         
         const item = window.currentItemsMap[id];
@@ -647,13 +712,31 @@
         document.body.classList.add('modal-open'); 
         
         const viewerImg = document.getElementById("viewerImage");
-        viewerImg.src = item.thumbnail || item.image || ""; 
-        viewerImg.style.opacity = "0.5";
+        const viewerTextQuestion = document.getElementById("viewerTextQuestion");
+        
+        // 處理純文字題目顯示
+        if (item.questionText) {
+            viewerTextQuestion.style.display = 'block';
+            viewerTextQuestion.innerHTML = marked.parse(item.questionText);
+        } else {
+            viewerTextQuestion.style.display = 'none';
+            viewerTextQuestion.innerHTML = '';
+        }
+
+        // 處理圖片顯示
+        if (item.thumbnail || item.image) {
+            viewerImg.src = item.thumbnail || item.image; 
+            viewerImg.style.opacity = "0.5";
+            viewerImg.style.display = "block";
+        } else {
+            viewerImg.src = "";
+            viewerImg.style.display = "none";
+        }
 
         renderViewerMetadata(id); 
         document.getElementById("imageViewerModal").style.display = "block";
 
-        if (!item.fullImageLoaded && !item.image) {
+        if (!item.fullImageLoaded && !item.image && (item.thumbnail || item.hasExplanation)) {
             try {
                 const imgDoc = await db.collection("question_images").doc(id).get();
                 if (imgDoc.exists) {
@@ -666,10 +749,13 @@
         }
 
         if (currentViewerId === id) { 
-            viewerImg.src = item.fullImage || item.image || viewerImg.src; 
-            viewerImg.style.opacity = "1"; 
-            if (item.annotationImage) loadBaseAnnotation(item.annotationImage);
-            else { baseAnnotationImg = null; drawHistory = []; redrawCanvas(); }
+            if (item.fullImage || item.image) {
+                viewerImg.src = item.fullImage || item.image || viewerImg.src; 
+                viewerImg.style.opacity = "1"; 
+                viewerImg.style.display = "block";
+                if (item.annotationImage) loadBaseAnnotation(item.annotationImage);
+                else { baseAnnotationImg = null; drawHistory = []; redrawCanvas(); }
+            }
         }
     }
 
@@ -794,7 +880,7 @@
         const handle = document.getElementById('dragHandle');
         let isDraggingToolbar = false;
         let dragOffsetX = 0, dragOffsetY = 0;
-        let lastClientY = 0; // 記錄最後的 Y 座標
+        let lastClientY = 0; 
 
         function startDrag(e) {
             isDraggingToolbar = true;
@@ -811,7 +897,7 @@
             e.preventDefault();
             let clientX = e.clientX || (e.touches && e.touches[0].clientX);
             let clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            lastClientY = clientY; // 持續更新 Y 座標
+            lastClientY = clientY; 
 
             let newLeft = clientX - dragOffsetX;
             let newTop = clientY - dragOffsetY;
@@ -834,7 +920,6 @@
 
             const winH = window.innerHeight;
 
-            // 核心修正：用滑鼠/手指的實際位置來判斷，而不是工具列的中心點
             if (lastClientY < winH * 0.25 || lastClientY > winH * 0.75) {
                 toolbar.classList.remove('vertical');
                 toolbar.classList.add('horizontal');
@@ -843,7 +928,6 @@
                 toolbar.classList.add('vertical');
             }
 
-            // 變換形狀後，重新計算邊界並進行「智慧貼齊」
             setTimeout(() => {
                 const rect = toolbar.getBoundingClientRect();
                 let currentLeft = parseFloat(toolbar.style.left) || 0;
@@ -852,7 +936,6 @@
                 const maxLeft = window.innerWidth - rect.width;
                 const maxTop = window.innerHeight - rect.height;
 
-                // 如果變成橫向且在底部，強制貼齊底部 (解決變形後浮在半空中的問題)
                 if (toolbar.classList.contains('horizontal')) {
                     if (lastClientY > winH * 0.75) currentTop = maxTop - 20;
                     if (lastClientY < winH * 0.25) currentTop = 20;
@@ -956,7 +1039,6 @@
 
     function startPosition(e) {
         if (!isDrawingMode) return;
-        // 如果是雙指觸控，交給手勢系統處理平移縮放，不要畫畫
         if (e.touches && e.touches.length >= 2) return; 
         
         e.preventDefault();
@@ -1054,7 +1136,7 @@
 
     function draw(e) {
         if (!isDrawing || !isDrawingMode) return;
-        if (e.touches && e.touches.length >= 2) return; // 雙指交給平移縮放
+        if (e.touches && e.touches.length >= 2) return; 
         
         e.preventDefault();
         const pos = getMousePos(e);
@@ -1219,7 +1301,6 @@
         cancelAnnotation();
     }
     
-    // --- 統一更新圖片的縮放與平移 ---
     function updateImageTransform() {
         document.getElementById("imageWrapper").style.transform = `translate(${currentPanX}px, ${currentPanY}px) scale(${currentZoom})`;
     }
@@ -1248,7 +1329,6 @@
         openImageViewer(filteredSortedItems[nextIdx].id);
     }
 
-    // --- 進階手勢偵測 (取代原本的 setupSwipeGestures) ---
     function setupAdvancedGestures() {
         const container = document.getElementById("viewerImgContainer");
         let touchStartX = 0, touchStartY = 0;
@@ -1257,15 +1337,13 @@
         let initialPinchDist = null;
         let lastTouchCenter = null;
 
-        // 1. 電腦版 Ctrl + 滾輪縮放 (游標跟隨)
         container.addEventListener('wheel', function(e) {
             if (e.ctrlKey || e.metaKey) {
-                e.preventDefault(); // 阻止網頁預設縮放
+                e.preventDefault(); 
                 const zoomDelta = e.deltaY > 0 ? -0.15 : 0.15;
                 let newZoom = currentZoom + zoomDelta;
                 newZoom = Math.max(0.5, Math.min(newZoom, 5));
 
-                // 計算游標相對於圖片中心的距離，實現「朝游標放大」
                 const rect = container.getBoundingClientRect();
                 const mouseX = e.clientX - rect.left - rect.width / 2;
                 const mouseY = e.clientY - rect.top - rect.height / 2;
@@ -1278,10 +1356,9 @@
             }
         }, { passive: false });
 
-        // 2. 手機版觸控事件 (雙指縮放/平移、單指滑動/平移)
         container.addEventListener('touchstart', e => {
             if (e.touches.length === 2) {
-                e.preventDefault(); // 防止瀏覽器預設的雙指縮放
+                e.preventDefault(); 
                 initialPinchDist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
                     e.touches[0].clientY - e.touches[1].clientY
@@ -1293,7 +1370,6 @@
             } else if (e.touches.length === 1) {
                 touchStartX = e.touches[0].clientX;
                 touchStartY = e.touches[0].clientY;
-                // 如果不在標註模式，且圖片已經放大，則允許單指平移
                 if (!isDrawingMode && currentZoom > 1) {
                     isPanning = true;
                     startPanX = currentPanX;
@@ -1315,19 +1391,17 @@
                 };
 
                 if (initialPinchDist) {
-                    // 處理縮放
                     const zoomRatio = currentDist / initialPinchDist;
                     let newZoom = currentZoom * zoomRatio;
                     newZoom = Math.max(0.5, Math.min(newZoom, 5));
 
-                    // 處理雙指平移
                     if (lastTouchCenter) {
                         currentPanX += currentCenter.x - lastTouchCenter.x;
                         currentPanY += currentCenter.y - lastTouchCenter.y;
                     }
 
                     currentZoom = newZoom;
-                    initialPinchDist = currentDist; // 重設以實現連續平滑縮放
+                    initialPinchDist = currentDist; 
                     lastTouchCenter = currentCenter;
                     updateImageTransform();
                 }
@@ -1348,7 +1422,6 @@
             }
             if (e.touches.length === 0) {
                 isPanning = false;
-                // 單指滑動換題 (只有在未放大且非標註模式時觸發)
                 if (!isDrawingMode && currentZoom === 1) {
                     let touchEndX = e.changedTouches[0].clientX;
                     if (touchStartX - touchEndX > 60) navigateViewer(1);
@@ -1358,11 +1431,20 @@
         }, { passive: false });
     }
 
-    /* --- 卡片點擊與多選邏輯 (修復回歸) --- */
+    /* --- 卡片點擊與多選邏輯 --- */
     window.toggleExplanation = async function(event, id) {
         event.stopPropagation(); const box = document.getElementById(`exp-${id}`); const btn = document.getElementById(`btn-exp-${id}`); const item = window.currentItemsMap[id];
         if (box.style.display === "none" || box.style.display === "") {
-            btn.innerText = "載入中..."; let expSrc = item.explanationImage;
+            btn.innerText = "載入中..."; 
+            
+            let expHtml = '';
+            // 1. 渲染純文字詳解 (Markdown)
+            if (item.explanationText) {
+                expHtml += `<div class="markdown-body" style="padding:12px; background:rgba(255,255,255,0.05); border-radius:6px; margin-bottom:10px;">${marked.parse(item.explanationText)}</div>`;
+            }
+
+            // 2. 渲染圖片詳解
+            let expSrc = item.explanationImage;
             if (!expSrc && item.hasExplanation) {
                 if (item.fullExplanationImage) expSrc = item.fullExplanationImage;
                 else {
@@ -1372,8 +1454,15 @@
                     } catch(e) { console.error("詳解載入失敗", e); }
                 }
             }
-            if (expSrc) { box.innerHTML = `<img class="question-img" src="${expSrc}" alt="詳解" style="border-radius: 4px;">`; box.style.display = "block"; btn.innerText = "隱藏詳解"; } 
-            else { btn.innerText = "無詳解圖片"; }
+            if (expSrc) {
+                expHtml += `<img class="question-img" src="${expSrc}" alt="詳解" style="border-radius: 4px;">`;
+            }
+
+            if (expHtml) { 
+                box.innerHTML = expHtml; box.style.display = "block"; btn.innerText = "隱藏詳解"; 
+            } else { 
+                btn.innerText = "無詳解內容"; 
+            }
         } else { box.style.display = "none"; btn.innerText = "看詳解"; }
     }
 
@@ -1431,25 +1520,16 @@
     function openExportModal() { document.getElementById('exportModal').style.display = 'block'; }
     function closeExportModal() { document.getElementById('exportModal').style.display = 'none'; }
 
-    /* --- 智慧 PDF 匯出 (自動合併同源照片與防卡死機制) --- */
-    
-    // 核心修復：移除強制縮小，保留最高畫質原圖
     async function mergeImagesToBase64(baseSrc, annoSrcs) {
         return new Promise((resolve) => {
             const validAnnos = annoSrcs.filter(src => src && src.trim() !== "");
-            
-            // 如果沒有標註，直接回傳原圖，保證 100% 無損畫質
-            if (validAnnos.length === 0) { 
-                resolve(baseSrc);
-                return; 
-            }
+            if (validAnnos.length === 0) { resolve(baseSrc); return; }
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
             const img = new Image();
             img.onload = () => {
-                // 使用原圖尺寸，不進行任何壓縮
                 canvas.width = img.width; 
                 canvas.height = img.height;
                 ctx.drawImage(img, 0, 0);
@@ -1460,15 +1540,11 @@
                     annoImg.onload = () => {
                         ctx.drawImage(annoImg, 0, 0, canvas.width, canvas.height);
                         loadedCount++;
-                        if (loadedCount === validAnnos.length) {
-                            resolve(canvas.toDataURL('image/jpeg', 0.95));
-                        }
+                        if (loadedCount === validAnnos.length) resolve(canvas.toDataURL('image/jpeg', 0.95));
                     };
                     annoImg.onerror = () => {
                         loadedCount++;
-                        if (loadedCount === validAnnos.length) {
-                            resolve(canvas.toDataURL('image/jpeg', 0.95));
-                        }
+                        if (loadedCount === validAnnos.length) resolve(canvas.toDataURL('image/jpeg', 0.95));
                     };
                     annoImg.src = src;
                 });
@@ -1500,12 +1576,22 @@
                         item.fullImageLoaded = true;
                     }
                 }
-                const imgKey = item.fullImage || item.image || item.thumbnail || "no_image_" + id;
+                // 支援純文字題目 (沒有圖片的狀況)
+                const imgKey = item.fullImage || item.image || item.thumbnail || "text_only_" + id;
                 if (!imageMap.has(imgKey)) imageMap.set(imgKey, []);
                 imageMap.get(imgKey).push(item);
             }
 
+            // 注入 Markdown 專用 CSS 到 PDF 中
             let contentHtml = `
+            <style>
+                .md-content { font-family: sans-serif; }
+                .md-content p { margin: 0 0 8px 0; }
+                .md-content strong { font-weight: bold; color: #000; }
+                .md-content blockquote { border-left: 4px solid #cbd5e1; padding-left: 12px; margin: 8px 0; color: #475569; background-color: #f8fafc; padding-top: 8px; padding-bottom: 8px; }
+                .md-content ul, .md-content ol { margin: 0 0 10px 0; padding-left: 24px; }
+                .md-content code { background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+            </style>
             <div style="padding: 15px; background-color: #ffffff; color: #000000; font-family: sans-serif;">
                 <h2 style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 30px; font-size: 24px;">
                     ${mode === 'guide' ? '學測錯題精華講義' : '學測錯題實戰卷'}
@@ -1513,11 +1599,13 @@
             `;
 
             let questionCounter = 1;
-            const imagesToPreload = new Set(); // 收集所有要預先解碼的圖片
+            const imagesToPreload = new Set(); 
 
             if (mode === 'guide') {
                 for (let [imgKey, items] of imageMap.entries()) {
                     let headersHtml = '';
+                    let qTextHtml = '';
+                    
                     items.forEach((item, idx) => {
                         const tagsStr = (item.tags && item.tags.length > 0) ? item.tags.join('、') : '';
                         const hasNotes = item.notes && item.notes.trim() !== "";
@@ -1530,35 +1618,45 @@
                                 ${hasNotes ? `<div style="font-size: 14px; color: #334155;">📝 備註：${item.notes}</div>` : '<div style="font-size: 14px; color: #94a3b8;">無備註</div>'}
                             </div>
                         `;
+                        
+                        if (item.questionText) {
+                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${marked.parse(item.questionText)}</div>`;
+                        }
                     });
 
-                    const annoSrcs = items.map(i => i.annotationImage);
-                    const mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
-                    imagesToPreload.add(mergedImgSrc);
+                    let mergedImgSrc = null;
+                    if (!imgKey.startsWith("text_only_")) {
+                        const annoSrcs = items.map(i => i.annotationImage);
+                        mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                        imagesToPreload.add(mergedImgSrc);
+                    }
 
-                    // 核心修復：使用 display: block; margin: 0 auto; 避免 html2canvas 算錯高度
                     contentHtml += `
                         <div style="page-break-inside: avoid; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eee;">
                             ${headersHtml}
-                            <div style="margin-top: 10px; width: 100%;">
-                                <img src="${mergedImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" />
-                            </div>
+                            ${qTextHtml}
+                            ${mergedImgSrc ? `<div style="margin-top: 10px; width: 100%;"><img src="${mergedImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" /></div>` : ''}
                     `;
 
                     const expMap = new Set();
                     for (let idx = 0; idx < items.length; idx++) {
                         const item = items[idx];
                         const expImgSrc = item.fullExplanationImage || item.explanationImage;
-                        if (expImgSrc && !expMap.has(expImgSrc)) {
-                            expMap.add(expImgSrc);
-                            imagesToPreload.add(expImgSrc);
-                            contentHtml += `
-                            <div style="margin-top: 15px;">
-                                <div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>
-                                <div style="width: 100%;">
-                                    <img src="${expImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" />
-                                </div>
-                            </div>`;
+                        const expText = item.explanationText;
+                        
+                        if (expImgSrc || expText) {
+                            contentHtml += `<div style="margin-top: 15px;"><div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>`;
+                            
+                            if (expText) {
+                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
+                            }
+                            
+                            if (expImgSrc && !expMap.has(expImgSrc)) {
+                                expMap.add(expImgSrc);
+                                imagesToPreload.add(expImgSrc);
+                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
+                            }
+                            contentHtml += `</div>`;
                         }
                     }
                     contentHtml += `</div>`;
@@ -1567,24 +1665,30 @@
             } else {
                 for (let [imgKey, items] of imageMap.entries()) {
                     let headersHtml = '';
+                    let qTextHtml = '';
                     items.forEach((item, idx) => {
                         headersHtml += `
                             <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
                                 Q${questionCounter + idx}. 【${item.subject}】${item.concept} <span style="font-size:12px; color:#666;">(${item.unit})</span>
                             </div>
                         `;
+                        if (item.questionText) {
+                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${marked.parse(item.questionText)}</div>`;
+                        }
                     });
 
-                    const annoSrcs = items.map(i => i.annotationImage);
-                    const mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
-                    imagesToPreload.add(mergedImgSrc);
+                    let mergedImgSrc = null;
+                    if (!imgKey.startsWith("text_only_")) {
+                        const annoSrcs = items.map(i => i.annotationImage);
+                        mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                        imagesToPreload.add(mergedImgSrc);
+                    }
 
                     contentHtml += `
                         <div style="page-break-inside: avoid; margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px dashed #cccccc;">
                             ${headersHtml}
-                            <div style="margin-top: 10px; width: 100%;">
-                                <img src="${mergedImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" />
-                            </div>
+                            ${qTextHtml}
+                            ${mergedImgSrc ? `<div style="margin-top: 10px; width: 100%;"><img src="${mergedImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" /></div>` : ''}
                         </div>
                     `;
                     questionCounter += items.length;
@@ -1602,23 +1706,27 @@
                     for (let idx = 0; idx < items.length; idx++) {
                         const item = items[idx];
                         const expImgSrc = item.fullExplanationImage || item.explanationImage;
+                        const expText = item.explanationText;
                         const hasNotes = item.notes && item.notes.trim() !== "";
                         
-                        if (expImgSrc || hasNotes) {
-                            let expHtml = '';
-                            if (expImgSrc) {
-                                imagesToPreload.add(expImgSrc);
-                                expHtml = `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" /></div>`;
-                            }
+                        if (expImgSrc || expText || hasNotes) {
                             contentHtml += `
                                 <div style="page-break-inside: avoid; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
                                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #333;">
                                         Q${questionCounter + idx} 解析：
                                     </div>
                                     ${hasNotes ? `<div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 8px; border-left: 3px solid #6366f1; margin-bottom: 10px;">備註: ${item.notes}</div>` : ''}
-                                    ${expHtml}
-                                </div>
                             `;
+                            
+                            if (expText) {
+                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
+                            }
+                            
+                            if (expImgSrc) {
+                                imagesToPreload.add(expImgSrc);
+                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto;" /></div>`;
+                            }
+                            contentHtml += `</div>`;
                         } else {
                             contentHtml += `
                                 <div style="page-break-inside: avoid; margin-bottom: 20px;">
@@ -1633,14 +1741,13 @@
 
             contentHtml += `</div>`; 
 
-            // 核心修復：強制瀏覽器在背景「預先解碼」所有圖片，確保 html2canvas 截圖時圖片 100% 完整
             btn.innerText = "⏳ 載入圖片中...";
             const preloadPromises = Array.from(imagesToPreload).map(src => {
                 return new Promise((resolve) => {
                     if (!src) return resolve();
                     const img = new Image();
                     img.onload = async () => {
-                        try { await img.decode(); } catch(e) {} // 強制解碼進記憶體
+                        try { await img.decode(); } catch(e) {} 
                         resolve();
                     };
                     img.onerror = resolve;
@@ -1649,7 +1756,6 @@
             });
             await Promise.all(preloadPromises);
             
-            // 給予瀏覽器一點點時間確認快取
             await new Promise(r => setTimeout(r, 150));
 
             btn.innerText = "⏳ 產生 PDF 中...";
@@ -1699,8 +1805,7 @@
                         item.fullImageLoaded = true;
                     }
                 }
-                // 完美相容舊資料：加入 item.image 判斷
-                const imgKey = item.fullImage || item.image || item.thumbnail || "no_image_" + id;
+                const imgKey = item.fullImage || item.image || item.thumbnail || "text_only_" + id;
                 if (!imageMap.has(imgKey)) imageMap.set(imgKey, []);
                 imageMap.get(imgKey).push(item);
             }
@@ -1711,15 +1816,20 @@
                 items.forEach(item => {
                     headersHtml += `<h3 style="color: #333; margin-bottom: 5px; font-family: sans-serif;">【${item.subject}】${item.unit} - ${item.concept}</h3>`;
                     if (item.notes) headersHtml += `<p style="color: #555; font-size: 14px; margin-bottom: 10px; font-family: sans-serif;">備註: ${item.notes}</p>`;
+                    if (item.questionText) headersHtml += `<div style="margin-bottom: 10px; font-family: sans-serif;">${marked.parse(item.questionText)}</div>`;
                 });
 
-                const annoSrcs = items.map(i => i.annotationImage);
-                const mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                let mergedImgSrc = null;
+                if (!imgKey.startsWith("text_only_")) {
+                    const annoSrcs = items.map(i => i.annotationImage);
+                    mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                }
 
                 contentHtml += `
                     <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #ccc;">
                         ${headersHtml}
-                        <p><img src="${mergedImgSrc}" style="max-width: 600px; width: 100%; height: auto;" /></p><br><br>
+                        ${mergedImgSrc ? `<p><img src="${mergedImgSrc}" style="max-width: 600px; width: 100%; height: auto;" /></p>` : ''}
+                        <br><br>
                     </div>
                 `;
             }
@@ -1859,59 +1969,121 @@
         else { toggleBtn.style.display = "none"; }
     }
 
-    /* --- 完整上傳邏輯 --- */
+    /* --- 全新 All-in-One 上傳邏輯 --- */
     function openModal() { document.getElementById("addModal").style.display = "block"; }
     function closeModal() {
         document.getElementById("addModal").style.display = "none"; document.getElementById("multiPhotoInput").value = "";
         document.getElementById("queueContainer").innerHTML = ""; document.getElementById("submitAllBtn").style.display = "none";
-        document.getElementById("masterImportSection").style.display = "none"; document.getElementById("masterAiImport").value = ""; selectedFilesQueue = [];
+        document.getElementById("masterAiImport").value = ""; selectedFilesQueue = [];
     }
+
+    // 統一的 Queue Item 產生器 (支援純文字與圖片)
+    function addQueueItem(meta = "", qText = "", expText = "", file = null) {
+        const queueId = Date.now() + Math.floor(Math.random() * 1000);
+        const itemDiv = document.createElement("div"); 
+        itemDiv.className = "queue-item"; 
+        itemDiv.id = `queue-${queueId}`;
+        
+        let filePreviewHtml = '';
+        if (file) {
+            const previewUrl = URL.createObjectURL(file);
+            filePreviewHtml = `<img src="${previewUrl}" class="queue-img-preview" alt="預覽圖">`;
+            selectedFilesQueue.push({ id: queueId, file: file });
+        } else {
+            filePreviewHtml = `<div style="height:150px; background:#0f172a; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:12px; border: 1px solid var(--border-color);">無題目圖片</div>`;
+            selectedFilesQueue.push({ id: queueId, file: null }); 
+        }
+
+        itemDiv.innerHTML = `
+            <div class="queue-img-wrap">
+                ${filePreviewHtml}
+                <label style="font-size:13px; margin-top:8px; display:block; text-align:center; color:var(--accent-color); cursor:pointer; font-weight:bold;">
+                    📁 附加/更換題目圖
+                    <input type="file" id="qImg-${queueId}" accept="image/*" style="display:none;" onchange="updateQueuePreview(this, ${queueId})">
+                </label>
+                <label style="font-size:13px; margin-top:4px; display:block; text-align:center; color:var(--success-color); cursor:pointer; font-weight:bold;">
+                    📁 附加詳解圖
+                    <input type="file" id="expImg-${queueId}" accept="image/*" style="display:none;">
+                </label>
+            </div>
+            <div class="queue-inputs">
+                <input type="text" id="meta-${queueId}" placeholder="分類：科目,單元,觀念,題型,備註" value="${meta}">
+                <textarea id="qText-${queueId}" rows="4" placeholder="純文字題目 (支援 Markdown，選填)">${qText}</textarea>
+                <textarea id="expText-${queueId}" rows="3" placeholder="純文字詳解 (支援 Markdown，選填)">${expText}</textarea>
+                <button class="btn-nav btn-secondary" style="align-self:flex-end; margin-top:5px; color:var(--danger-color); border:1px solid var(--danger-color);" onclick="removeQueueItem(${queueId})">移除</button>
+            </div>
+        `;
+        document.getElementById("queueContainer").appendChild(itemDiv);
+        document.getElementById("submitAllBtn").style.display = "flex";
+    }
+
+    // 更新預覽圖
+    window.updateQueuePreview = function(input, id) {
+        if (input.files && input.files[0]) {
+            const url = URL.createObjectURL(input.files[0]);
+            const wrap = document.getElementById(`queue-${id}`).querySelector('.queue-img-wrap');
+            const oldPreview = wrap.querySelector('.queue-img-preview') || wrap.querySelector('div');
+            
+            const newImg = document.createElement('img');
+            newImg.src = url;
+            newImg.className = 'queue-img-preview';
+            newImg.alt = '預覽圖';
+            
+            wrap.replaceChild(newImg, oldPreview);
+        }
+    }
+
+    // 處理手動選擇照片
     function handleFilesSelect(e) {
         const files = Array.from(e.target.files); if (files.length === 0) return;
-        const container = document.getElementById("queueContainer"); const submitBtn = document.getElementById("submitAllBtn"); const masterImportSection = document.getElementById("masterImportSection");
-        files.forEach((file, index) => {
-            const queueId = Date.now() + index; selectedFilesQueue.push({ id: queueId, file: file });
-            const itemDiv = document.createElement("div"); itemDiv.className = "queue-item"; itemDiv.id = `queue-${queueId}`;
-            const previewUrl = URL.createObjectURL(file); const fileIndexLabel = selectedFilesQueue.length;
-            itemDiv.innerHTML = `
-                <div class="queue-img-wrap">
-                    <span style="font-size:13px; font-weight:bold; color:var(--warning-color);">第 ${fileIndexLabel} 張照片</span>
-                    <img src="${previewUrl}" class="queue-img-preview" alt="預覽圖">
-                    <label style="font-size:12px; margin:0; text-align:center;">選擇詳解照(選填)</label>
-                    <input type="file" id="exp-${queueId}" accept="image/*" style="font-size:11px; width:100%;">
-                </div>
-                <div class="queue-inputs">
-                    <label>這張照片的 AI 解析結果：</label>
-                    <textarea id="ai-${queueId}" placeholder="格式：科目,單元,核心觀念,題型,備註"></textarea>
-                    <input type="text" id="note-${queueId}" placeholder="手動備註 (選填)">
-                    <button class="btn-nav btn-secondary" style="align-self:flex-end; margin-top:5px; color:var(--danger-color); border:1px solid var(--danger-color);" onclick="removeQueueItem(${queueId})">移除</button>
-                </div>
-            `;
-            container.appendChild(itemDiv);
+        files.forEach((file) => {
+            addQueueItem("", "", "", file);
         });
-        submitBtn.style.display = "flex"; masterImportSection.style.display = "block"; e.target.value = ""; 
+        e.target.value = ""; 
     }
+
+    // 處理 AI 智能解析
+    window.parseSmartImport = function() {
+        const text = document.getElementById('masterAiImport').value;
+        if (!text.trim()) {
+            alert("請先貼上 AI 的解析結果！");
+            return;
+        }
+        
+        // 以 [錯題] 或 [照片] 作為分割點
+        const blocks = text.split(/\[(?:錯題|照片)\s*\d*\]/i).filter(b => b.trim().length > 0);
+        
+        if (blocks.length === 0) {
+            addQueueItem("", text, "");
+            return;
+        }
+
+        blocks.forEach((block) => {
+            let meta = "", qText = "", expText = "";
+            
+            const metaMatch = block.match(/分類[：:]\s*(.*)/);
+            if (metaMatch) meta = metaMatch[1].trim();
+            
+            const qMatch = block.match(/題目[：:]([\s\S]*?)(?=詳解[：:]|$)/);
+            if (qMatch) qText = qMatch[1].trim();
+            
+            const expMatch = block.match(/詳解[：:]([\s\S]*)/);
+            if (expMatch) expText = expMatch[1].trim();
+            
+            addQueueItem(meta, qText, expText, null);
+        });
+        
+        document.getElementById('masterAiImport').value = ""; 
+    }
+
     function removeQueueItem(id) {
-        document.getElementById(`queue-${id}`).remove(); selectedFilesQueue = selectedFilesQueue.filter(item => item.id !== id);
-        selectedFilesQueue.forEach((item, index) => {
-            const row = document.getElementById(`queue-${item.id}`);
-            if (row) { const span = row.querySelector(".queue-img-wrap span"); if (span) span.innerText = `第 ${index + 1} 張照片`; }
-        });
-        if (selectedFilesQueue.length === 0) { document.getElementById("submitAllBtn").style.display = "none"; document.getElementById("masterImportSection").style.display = "none"; } 
-        else { distributeMasterAi(); }
+        document.getElementById(`queue-${id}`).remove(); 
+        selectedFilesQueue = selectedFilesQueue.filter(item => item.id !== id);
+        if (selectedFilesQueue.length === 0) { 
+            document.getElementById("submitAllBtn").style.display = "none"; 
+        } 
     }
-    function distributeMasterAi() {
-        const masterVal = document.getElementById("masterAiImport").value.trim();
-        selectedFilesQueue.forEach(qItem => { const ta = document.getElementById(`ai-${qItem.id}`); if (ta) ta.value = ""; });
-        if (!masterVal) return;
-        const photoLinesMap = {}; selectedFilesQueue.forEach((_, idx) => { photoLinesMap[idx + 1] = []; });
-        const lines = masterVal.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        lines.forEach(line => {
-            const match = line.match(/^(?:\[?\s*照片|Page|Img|圖)?\s*(\d+)\s*\]?[:：\s,，\.]*(.*)$/i);
-            if (match) { const photoNum = parseInt(match[1], 10); const cleanLine = match[2].trim(); if (photoLinesMap[photoNum]) photoLinesMap[photoNum].push(cleanLine); }
-        });
-        selectedFilesQueue.forEach((qItem, idx) => { const ta = document.getElementById(`ai-${qItem.id}`); if (ta && photoLinesMap[idx + 1]) ta.value = photoLinesMap[idx + 1].join('\n'); });
-    }
+
     function compressImage(file, maxSize = 1000, quality = 0.7) {
         return new Promise((resolve) => {
             const reader = new FileReader(); reader.readAsDataURL(file);
@@ -1927,61 +2099,145 @@
             };
         });
     }
+
     async function saveAllQuestions() {
         if (selectedFilesQueue.length === 0) return;
-        const submitBtn = document.getElementById("submitAllBtn"); submitBtn.disabled = true; submitBtn.innerText = "⏳ 壓縮上傳中...";
+        const submitBtn = document.getElementById("submitAllBtn"); submitBtn.disabled = true; submitBtn.innerText = "⏳ 儲存上傳中...";
         try {
             const batch = db.batch(); let successCount = 0; const baseGroupId = Date.now(); let timeOffset = 0;
+            
             for (let i = 0; i < selectedFilesQueue.length; i++) {
-                const qItem = selectedFilesQueue[i]; const aiText = document.getElementById(`ai-${qItem.id}`).value.trim(); const manualNote = document.getElementById(`note-${qItem.id}`).value.trim(); const expFileInput = document.getElementById(`exp-${qItem.id}`);
-                if (!aiText) continue; 
-                const thumbBase64 = await compressImage(qItem.file, 200, 0.4); const fullBase64 = await compressImage(qItem.file, 1200, 0.8);
-                let expBase64 = null; if (expFileInput.files && expFileInput.files.length > 0) { expBase64 = await compressImage(expFileInput.files[0], 1200, 0.8); }
-                const lines = aiText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                lines.forEach(line => {
-                    const parts = line.split(/[,，]/);
-                    if (parts.length >= 4) {
-                        let finalNotes = parts[4] ? parts[4].trim() : ""; if (manualNote) finalNotes = finalNotes ? `${manualNote} (${finalNotes})` : manualNote;
-                        const docRef = db.collection("questions").doc();
-                        const questionMeta = {
-                            subject: parts[0].trim(), unit: parts[1].trim(), concept: parts[2].trim(), type: parts[3].trim(),
-                            thumbnail: thumbBase64, hasExplanation: !!expBase64, notes: finalNotes, reviewCount: 0, tags: [], timestamp: baseGroupId + timeOffset, groupId: baseGroupId
-                        };
-                        batch.set(docRef, questionMeta);
-                        const imgDocRef = db.collection("question_images").doc(docRef.id);
-                        batch.set(imgDocRef, { image: fullBase64, explanationImage: expBase64, annotationImage: "" });
-                        successCount++; timeOffset++; 
-                    }
-                });
+                const qItem = selectedFilesQueue[i];
+                const metaText = document.getElementById(`meta-${qItem.id}`).value.trim();
+                const qText = document.getElementById(`qText-${qItem.id}`).value.trim();
+                const expText = document.getElementById(`expText-${qItem.id}`).value.trim();
+                
+                const qImgInput = document.getElementById(`qImg-${qItem.id}`);
+                const expImgInput = document.getElementById(`expImg-${qItem.id}`);
+                
+                let finalQFile = qImgInput.files.length > 0 ? qImgInput.files[0] : qItem.file;
+                let finalExpFile = expImgInput.files.length > 0 ? expImgInput.files[0] : null;
+
+                // 如果完全沒有資料就跳過
+                if (!metaText && !qText && !finalQFile) continue; 
+
+                let thumbBase64 = "", fullBase64 = "";
+                if (finalQFile) {
+                    thumbBase64 = await compressImage(finalQFile, 200, 0.4);
+                    fullBase64 = await compressImage(finalQFile, 1200, 0.8);
+                }
+                
+                let expBase64 = null; 
+                if (finalExpFile) { 
+                    expBase64 = await compressImage(finalExpFile, 1200, 0.8); 
+                }
+
+                const parts = metaText.split(/[,，]/).map(p => p.trim());
+                const subject = parts[0] || "未分類";
+                const unit = parts[1] || "";
+                const concept = parts[2] || "";
+                const type = parts[3] || "";
+                const notes = parts[4] || "";
+
+                const docRef = db.collection("questions").doc();
+                const questionMeta = {
+                    subject, unit, concept, type, notes,
+                    questionText: qText,
+                    explanationText: expText,
+                    thumbnail: thumbBase64, 
+                    hasExplanation: !!expBase64 || !!expText, 
+                    reviewCount: 0, tags: [], timestamp: baseGroupId + timeOffset, groupId: baseGroupId
+                };
+                batch.set(docRef, questionMeta);
+                const imgDocRef = db.collection("question_images").doc(docRef.id);
+                batch.set(imgDocRef, { image: fullBase64, explanationImage: expBase64, annotationImage: "" });
+                successCount++; timeOffset++; 
             }
+            
             if (successCount > 0) { await batch.commit(); alert(`上傳成功！處理了 ${successCount} 題。`); closeModal(); } 
-            else { alert("未偵測到有效格式！"); }
+            else { alert("沒有可上傳的有效題目！"); }
         } catch (err) { alert("上傳失敗：" + err.message); }
         finally { submitBtn.disabled = false; submitBtn.innerText = "全部儲存並上傳"; }
+    }
+
+    // --- 雙指令切換邏輯 ---
+    window.switchPromptMode = function(mode) {
+        currentPromptMode = mode;
+        const btnText = document.getElementById("btnPromptText");
+        const btnImg = document.getElementById("btnPromptImg");
+        const desc = document.getElementById("promptDesc");
+        const textarea = document.getElementById("aiPromptText");
+
+        if (mode === 'text') {
+            btnText.className = "btn-nav btn-primary";
+            btnImg.className = "btn-nav btn-secondary";
+            desc.innerText = "💡 適合國、英、史、地等，AI 會幫你打出完整題目文字。";
+            textarea.value = promptTextMode;
+        } else {
+            btnText.className = "btn-nav btn-secondary";
+            btnImg.className = "btn-nav btn-primary";
+            desc.innerText = "💡 適合數、物、化或圖表題，AI 不會打題目，保留畫面乾淨讓你傳原圖。";
+            textarea.value = promptImageMode;
+        }
     }
 
     function updateAIPrompt(items) {
         const unitSet = new Set(); const conceptSet = new Set();
         items.forEach(item => { if (item.unit) unitSet.add(item.unit); if (item.concept) conceptSet.add(item.concept); });
         let unitString = Array.from(unitSet).join("、") || "無既有單元"; let conceptString = Array.from(conceptSet).join("、") || "無既有觀念";
-        const promptTemplate = `這是一組考題照片。請分析照片中「我寫錯或有手寫痕跡」的所有題目。
-如果上傳多張照片，請務必在每行開頭加上「[照片X]」。
-請針對「每一道題」單獨輸出一行格式如下（以半形逗號隔開），不要額外解釋或引言：
-[照片X] 科目,單元名稱,核心觀念,題型,題號備註
+        
+        promptTextMode = `請幫我將照片中的「錯題」進行結構化整理。
+請針對每一題，嚴格使用以下格式輸出（不要加上額外的引言或 Markdown 程式碼區塊符號）：
 
-【特殊規則】
-* 如果是一整個「題組」（例如閱讀測驗、圖表題），請將該題組的錯題「合併為一行」輸出。
-* 題號備註請寫在一起（例如：第45-48題），觀念寫該大題的核心觀念即可，避免產生過多重複照片。
+[錯題]
+分類：科目,單元名稱,核心觀念,題型,題號備註
+題目：
+(請完整打出題目與選項文字，如果是閱讀測驗請包含文章。請用 Markdown 排版)
+詳解：
+(請用 Markdown 排版寫出詳解。若照片無詳解請自行提供)
 
 【限制清單】
 * 欄位 1 (科目)：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
-* 欄位 2 (單元名稱)：優先使用既有單元保持一致 -> [ ${unitString} ]
-* 欄位 3 (核心觀念)：優先使用既有觀念保持一致 -> [ ${conceptString} ]
-* 欄位 4 (題型)：[單選題, 多選題, 非選擇題]
+* 欄位 2 (單元名稱)：優先使用既有單元 -> [ ${unitString} ]
+* 欄位 3 (核心觀念)：優先使用既有觀念 -> [ ${conceptString} ]
+* 欄位 4 (題型)：[單選題, 多選題, 非選擇題, 題組]
 * 欄位 5 (題號備註)：寫「第X題」。`;
-        document.getElementById("aiPromptText").value = promptTemplate;
+
+        promptImageMode = `請幫我將照片中的「錯題」進行結構化整理。
+請注意：這題包含複雜圖表或數學符號，**請「不要」幫我打出題目文字**（題目欄位請直接留白）。你只需要判斷分類並寫出詳解。
+請嚴格使用以下格式輸出（不要加上額外的引言或 Markdown 程式碼區塊符號）：
+
+[錯題]
+分類：科目,單元名稱,核心觀念,題型,題號備註
+題目：
+(留白)
+詳解：
+(請用 Markdown 排版寫出詳解。若照片無詳解請自行提供)
+
+【限制清單】
+* 欄位 1 (科目)：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
+* 欄位 2 (單元名稱)：優先使用既有單元 -> [ ${unitString} ]
+* 欄位 3 (核心觀念)：優先使用既有觀念 -> [ ${conceptString} ]
+* 欄位 4 (題型)：[單選題, 多選題, 非選擇題, 題組]
+* 欄位 5 (題號備註)：寫「第X題」。`;
+
+        switchPromptMode(currentPromptMode);
     }
-    function copyPrompt() { navigator.clipboard.writeText(document.getElementById("aiPromptText").value).then(() => { alert("指令已複製！請貼給 AI。"); }); }
+
+    function copyPrompt() { 
+        navigator.clipboard.writeText(document.getElementById("aiPromptText").value).then(() => { 
+            const btn = document.getElementById("btnCopyPrompt");
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "✅ 指令已複製！請貼給 AI";
+            btn.style.background = "var(--success-color)";
+            btn.style.color = "white";
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = "rgba(16, 185, 129, 0.2)";
+                btn.style.color = "#10b981";
+            }, 2000);
+        }); 
+    }
 </script>
 
 </body>
