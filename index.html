@@ -253,9 +253,9 @@
             border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px 16px; border-radius: 20px; z-index: 2201; cursor: pointer; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
 
-        /* 浮動詳解面板 */
+        /* 浮動詳解面板 (加寬版) */
         .viewer-exp-floating {
-            position: absolute; bottom: 20px; left: 20px; width: 400px; max-width: calc(100vw - 40px);
+            position: absolute; bottom: 20px; left: 20px; width: 450px; max-width: calc(100vw - 40px);
             max-height: 60vh; overflow-y: auto;
             background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px;
@@ -273,6 +273,15 @@
         .add-tag-container { display: flex; gap: 5px; margin-top: 10px; }
         .add-tag-container input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
         .add-tag-container button { background: var(--accent-color); color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+
+        /* --- 詳解全螢幕放大燈箱 --- */
+        #expLightbox {
+            display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.9); align-items: center; justify-content: center; cursor: zoom-out;
+        }
+        #expLightbox img {
+            max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px;
+        }
 
         /* --- 共用 Modal 樣式 --- */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.85); overflow-y: auto; backdrop-filter: blur(5px); }
@@ -515,6 +524,11 @@
             <div id="viewerExpContent"></div>
         </div>
     </div>
+</div>
+
+<!-- 詳解全螢幕放大燈箱 -->
+<div id="expLightbox" onclick="this.style.display='none'">
+    <img id="expLightboxImg" src="" alt="詳解放大圖">
 </div>
 
 <!-- 批量操作浮動工具列 -->
@@ -861,7 +875,9 @@
         }
         
         if (expSrc) {
-            expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid var(--border-color);">`;
+            // 加入點擊放大燈箱功能
+            expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
+            expHtml += `<div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">👆 點擊圖片可全螢幕放大</div>`;
         }
 
         if (expHtml) {
@@ -869,6 +885,12 @@
         } else {
             content.innerHTML = "<div style='text-align:center; color:var(--text-muted);'>這題沒有詳解喔！</div>";
         }
+    }
+
+    // 顯示詳解燈箱
+    window.showExpLightbox = function(src) {
+        document.getElementById('expLightboxImg').src = src;
+        document.getElementById('expLightbox').style.display = 'flex';
     }
 
     async function addTag(id) {
@@ -1406,7 +1428,6 @@
         openImageViewer(filteredSortedItems[nextIdx].id);
     }
 
-    // --- 核心修復：加入電腦版滑鼠拖曳與滾輪滑動 ---
     function setupAdvancedGestures() {
         const container = document.getElementById("viewerImgContainer");
         let touchStartX = 0, touchStartY = 0;
@@ -1415,13 +1436,11 @@
         let initialPinchDist = null;
         let lastTouchCenter = null;
 
-        // 電腦版：滑鼠拖曳平移
         let isMousePanning = false;
         let mouseStartX = 0, mouseStartY = 0;
 
         container.addEventListener('mousedown', e => {
             if (isDrawingMode) return;
-            // 避免點擊到按鈕或面板時觸發拖曳
             if (e.target.closest('.viewer-tools') || e.target.closest('.viewer-nav-btn') || e.target.closest('.viewer-exp-floating') || e.target.closest('.viewer-metadata-floating')) return; 
             
             isMousePanning = true;
@@ -1449,7 +1468,6 @@
             }
         });
 
-        // 電腦版：Ctrl+滾輪縮放，一般滾輪上下滑動
         container.addEventListener('wheel', function(e) {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault(); 
@@ -1467,7 +1485,6 @@
                 currentZoom = newZoom;
                 updateImageTransform();
             } else {
-                // 一般滾輪：上下滑動長圖
                 if (!isDrawingMode) {
                     e.preventDefault();
                     currentPanY -= e.deltaY;
@@ -1477,7 +1494,6 @@
             }
         }, { passive: false });
 
-        // 手機版：雙指縮放/平移、單指滑動/平移
         container.addEventListener('touchstart', e => {
             if (e.touches.length === 2) {
                 e.preventDefault(); 
@@ -2141,7 +2157,6 @@
 
     // --- 核心功能：多張圖片自動拼接成垂直長圖 ---
     async function stitchImages(files) {
-        // 核心修復：依照檔名排序，確保拼接順序正確
         const sortedFiles = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
         
         const images = await Promise.all(sortedFiles.map(file => {
@@ -2161,16 +2176,15 @@
         canvas.height = totalHeight;
         const ctx = canvas.getContext('2d');
 
-        // 確保拼接時背景是白色的
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         let currentY = 0;
         for (const img of images) {
-            const x = (maxWidth - img.width) / 2; // 置中對齊
+            const x = (maxWidth - img.width) / 2; 
             ctx.drawImage(img, x, currentY);
             currentY += img.height;
-            URL.revokeObjectURL(img.src); // 釋放記憶體
+            URL.revokeObjectURL(img.src); 
         }
 
         return new Promise(resolve => {
@@ -2190,7 +2204,7 @@
         if (input.files.length > 1) {
             textSpan.innerText = "⏳ 圖片拼接中...";
             finalFile = await stitchImages(input.files);
-            input.stitchedFile = finalFile; // 將拼接好的檔案存在 input 元素上
+            input.stitchedFile = finalFile; 
         } else {
             input.stitchedFile = null;
         }
@@ -2233,7 +2247,6 @@
             return;
         }
         
-        // 以 [錯題] 或 [照片] 作為分割點
         const blocks = text.split(/\[(?:錯題|照片)\s*\d*\]/i).filter(b => b.trim().length > 0);
         
         if (blocks.length === 0) {
@@ -2253,7 +2266,6 @@
             const expMatch = block.match(/詳解[：:]([\s\S]*)/);
             if (expMatch) expText = expMatch[1].trim();
             
-            // 如果 AI 回傳 (留白)，則清空字串
             if (qText.includes("(留白)")) qText = "";
             if (expText.includes("(留白)")) expText = "";
 
@@ -2281,7 +2293,6 @@
                     let width = img.width; 
                     let height = img.height;
                     
-                    // 優先限制寬度，高度放寬到 4000px 以支援長圖
                     if (width > maxWidth) { 
                         height = Math.round(height * (maxWidth / width)); 
                         width = maxWidth; 
@@ -2296,7 +2307,6 @@
                     canvas.height = height; 
                     const ctx = canvas.getContext("2d"); 
                     
-                    // 核心修復：確保壓縮時背景是白色的，避免透明 PNG 變黑
                     ctx.fillStyle = "#ffffff";
                     ctx.fillRect(0, 0, width, height);
                     
@@ -2322,17 +2332,15 @@
                 const qImgInput = document.getElementById(`qImg-${qItem.id}`);
                 const expImgInput = document.getElementById(`expImg-${qItem.id}`);
                 
-                // 優先使用拼接好的長圖，否則使用單張圖
                 let finalQFile = qImgInput.stitchedFile || (qImgInput.files.length > 0 ? qImgInput.files[0] : qItem.file);
                 let finalExpFile = expImgInput.stitchedFile || (expImgInput.files.length > 0 ? expImgInput.files[0] : null);
 
-                // 如果完全沒有資料就跳過
                 if (!metaText && !qText && !finalQFile) continue; 
 
                 let thumbBase64 = "", fullBase64 = "";
                 if (finalQFile) {
-                    thumbBase64 = await compressImage(finalQFile, 300, 1000, 0.5); // 縮圖
-                    fullBase64 = await compressImage(finalQFile, 1200, 4000, 0.85); // 高畫質原圖
+                    thumbBase64 = await compressImage(finalQFile, 300, 1000, 0.5); 
+                    fullBase64 = await compressImage(finalQFile, 1200, 4000, 0.85); 
                 }
                 
                 let expBase64 = null; 
