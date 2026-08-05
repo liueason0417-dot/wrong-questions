@@ -11,6 +11,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- 引入 marked.js 用於解析 Markdown 語法 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 引入 KaTeX 用於渲染數學公式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     
     <style>
         /* --- 現代化暗色主題色票 --- */
@@ -62,11 +66,15 @@
 
         /* --- 控制面板 (篩選) --- */
         .control-panel { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; }
-        .filter-group { display: flex; gap: 15px; flex-wrap: wrap; }
+        .filter-group { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
         .filter-group select {
             flex: 1; min-width: 140px; padding: 10px 12px; background-color: #0f172a; border: 1px solid var(--border-color);
             border-radius: 8px; color: var(--text-main); font-size: 14px; cursor: pointer;
         }
+        
+        /* 公式開關按鈕樣式 */
+        #btnToggleFormula { transition: all 0.2s; }
+        #btnToggleFormula.active { background-color: rgba(245, 158, 11, 0.2); color: var(--warning-color); border-color: var(--warning-color); }
 
         .chart-section { margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; display: none; }
         .chart-section.active { display: block; }
@@ -124,13 +132,14 @@
         .btn-toggle-exp:hover { text-decoration: underline; }
         .explanation-img-box { display: none; margin-top: 10px; background-color: #0f172a; border-radius: 6px; overflow: hidden; }
 
-        /* --- Markdown 渲染樣式 --- */
+        /* --- Markdown & LaTeX 渲染樣式 --- */
         .markdown-body { font-family: inherit; line-height: 1.6; font-size: 14px; color: #f8fafc; }
         .markdown-body p { margin-top: 0; margin-bottom: 10px; }
         .markdown-body strong { color: var(--accent-color); font-weight: 700; }
         .markdown-body blockquote { border-left: 4px solid var(--border-color); padding-left: 12px; margin-left: 0; color: var(--text-muted); background: rgba(255,255,255,0.05); padding-top: 8px; padding-bottom: 8px; border-radius: 0 4px 4px 0; }
         .markdown-body ul, .markdown-body ol { margin-top: 0; padding-left: 20px; margin-bottom: 10px; }
         .markdown-body code { background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .katex { color: #f8fafc; } /* 確保數學公式在暗色模式下清晰可見 */
 
         /* --- 批量操作浮動工具列 --- */
         .batch-floating-bar {
@@ -346,6 +355,8 @@
                 <option value="oldest">⏱️ 最舊加入優先</option>
                 <option value="reviewAsc">🔄 複習次數：少到多</option>
             </select>
+            <!-- 🌟 新增：只看公式開關 -->
+            <button id="btnToggleFormula" class="btn-nav btn-secondary" onclick="toggleFormulaFilter()" style="padding: 10px 12px; border: 1px solid var(--border-color);">🌟 只看公式</button>
         </div>
         
         <button class="btn-toggle-chart" onclick="toggleChartSection()">📊 顯示圖表 ▼</button>
@@ -515,7 +526,7 @@
         <div class="viewer-metadata-floating" id="viewerMetadata"></div>
         <button class="btn-toggle-meta" id="btnToggleMeta" onclick="toggleMetadata()">ℹ️ 顯示資訊</button>
 
-        <!-- 浮動詳解面板 -->
+        <!-- 浮動詳解面板 (加寬版) -->
         <div id="viewerExpPanel" class="viewer-exp-floating" style="display:none;">
             <div style="display:flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
                 <strong style="color: var(--warning-color); font-size: 16px;">💡 解答與解析</strong>
@@ -574,6 +585,7 @@
     let lastSelectedId = null;
     let pressTimer;
     let chartExpanded = false;
+    let showOnlyFormulas = false; // 🌟 公式庫開關狀態
 
     // --- 雙指令模式變數 ---
     let promptTextMode = "";
@@ -585,6 +597,21 @@
         let hash = 0;
         for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
         return tagColors[Math.abs(hash) % tagColors.length];
+    }
+
+    // --- 輔助函數：渲染 LaTeX 數學公式 ---
+    function applyMathRendering(el) {
+        if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(el, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: false
+            });
+        }
     }
 
     window.onload = function() {
@@ -613,6 +640,7 @@
                 const item = doc.data();
                 item.id = doc.id;
                 if (typeof item.reviewCount === 'undefined') item.reviewCount = 0;
+                if (typeof item.isFormula === 'undefined') item.isFormula = false; // 確保有預設值
                 if (!item.tags) item.tags = []; 
                 
                 item.tags.forEach(t => allTags.add(t));
@@ -639,12 +667,25 @@
         renderQuestions();
     }
 
+    // 🌟 切換公式庫顯示
+    window.toggleFormulaFilter = function() {
+        showOnlyFormulas = !showOnlyFormulas;
+        const btn = document.getElementById("btnToggleFormula");
+        if (showOnlyFormulas) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+        renderQuestions();
+    }
+
     function renderQuestions() {
         const filterSub = document.getElementById("filterSubject").value;
         const filterTag = document.getElementById("filterTag").value;
         const sortOrder = document.getElementById("sortOrder").value;
 
         filteredSortedItems = allItemsArray.filter(item => {
+            if (showOnlyFormulas && !item.isFormula) return false; // 🌟 公式庫過濾
             if (filterSub !== "全部" && item.subject !== filterSub) return false;
             if (filterTag !== "全部" && !item.tags.includes(filterTag)) return false;
             if (searchQuery) {
@@ -705,6 +746,7 @@
                     <div class="card-checkbox"></div>
                     <div class="question-img-container">
                         <span class="tag-subject-absolute">${item.subject}</span>
+                        ${item.isFormula ? `<span style="position: absolute; top: 10px; left: 40px; background-color: var(--warning-color); color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; z-index: 5; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">🌟 公式</span>` : ''}
                         ${imgHtml}
                     </div>
                     <div class="question-details">
@@ -722,6 +764,9 @@
                 listContainer.appendChild(card);
             });
         }
+
+        // 渲染完畢後，套用 LaTeX 數學公式渲染
+        applyMathRendering(listContainer);
 
         if(document.getElementById("chartSection").classList.contains("active")) triggerChartRebuilt();
         updateSelectionUI();
@@ -758,6 +803,7 @@
         if (item.questionText) {
             viewerTextQuestion.style.display = 'block';
             viewerTextQuestion.innerHTML = marked.parse(item.questionText);
+            applyMathRendering(viewerTextQuestion); // 渲染 LaTeX
         } else {
             viewerTextQuestion.style.display = 'none';
             viewerTextQuestion.innerHTML = '';
@@ -812,7 +858,10 @@
 
         const metaHtml = `
             <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="background:var(--accent-color); color:white; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold;">${item.subject}</span>
+                <div>
+                    <span style="background:var(--accent-color); color:white; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold;">${item.subject}</span>
+                    ${item.isFormula ? `<span style="background:var(--warning-color); color:white; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold; margin-left:8px;">🌟 公式</span>` : ''}
+                </div>
                 <button onclick="toggleMetadata()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px;">隱藏 🔽</button>
             </div>
             <div style="color:var(--text-main); font-size:16px; line-height:1.5;">
@@ -882,6 +931,7 @@
 
         if (expHtml) {
             content.innerHTML = expHtml;
+            applyMathRendering(content); // 渲染 LaTeX
         } else {
             content.innerHTML = "<div style='text-align:center; color:var(--text-muted);'>這題沒有詳解喔！</div>";
         }
@@ -1596,6 +1646,7 @@
 
             if (expHtml) { 
                 box.innerHTML = expHtml; box.style.display = "block"; btn.innerText = "隱藏詳解"; 
+                applyMathRendering(box); // 渲染 LaTeX
             } else { 
                 btn.innerText = "無詳解內容"; 
             }
@@ -1897,6 +1948,20 @@
             await new Promise(r => setTimeout(r, 150));
 
             btn.innerText = "⏳ 產生 PDF 中...";
+            
+            // 建立隱藏容器來渲染 LaTeX
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.top = '0';
+            tempContainer.style.left = '0';
+            tempContainer.style.width = '800px';
+            tempContainer.style.zIndex = '-9999';
+            tempContainer.style.backgroundColor = '#ffffff';
+            tempContainer.innerHTML = contentHtml;
+            document.body.appendChild(tempContainer);
+            
+            applyMathRendering(tempContainer); // 渲染 PDF 內的 LaTeX
+
             const opt = {
                 margin:       15,
                 filename:     mode === 'guide' ? '學測錯題精華講義.pdf' : '學測錯題實戰卷.pdf',
@@ -1906,8 +1971,9 @@
                 pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
             };
 
-            await html2pdf().set(opt).from(contentHtml).save();
+            await html2pdf().set(opt).from(tempContainer).save();
             
+            document.body.removeChild(tempContainer);
             closeExportModal();
             cancelSelection();
 
@@ -1972,8 +2038,12 @@
                 `;
             }
 
+            const tempContainer = document.createElement('div');
+            tempContainer.innerHTML = contentHtml;
+            applyMathRendering(tempContainer); // 渲染 Word 內的 LaTeX
+
             const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>學測錯題實戰卷</title></head><body>";
-            const footer = "</body></html>"; const sourceHTML = header + contentHtml + footer;
+            const footer = "</body></html>"; const sourceHTML = header + tempContainer.innerHTML + footer;
             const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const fileDownload = document.createElement("a");
             fileDownload.href = url; fileDownload.download = '學測錯題實戰卷.doc'; document.body.appendChild(fileDownload); fileDownload.click();
             
@@ -2145,9 +2215,14 @@
                 </label>
             </div>
             <div class="queue-inputs">
-                <input type="text" id="meta-${queueId}" placeholder="分類：科目,單元,觀念,題型,備註" value="${meta}">
-                <textarea id="qText-${queueId}" rows="4" placeholder="純文字題目 (支援 Markdown，選填)">${qText}</textarea>
-                <textarea id="expText-${queueId}" rows="3" placeholder="純文字詳解 (支援 Markdown，選填)">${expText}</textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <input type="text" id="meta-${queueId}" placeholder="分類：科目,單元,觀念,題型,備註" value="${meta}" style="flex: 1; margin-right: 10px;">
+                    <label style="display:flex; align-items:center; gap:5px; color:var(--warning-color); font-weight:bold; font-size:13px; cursor:pointer; white-space: nowrap;">
+                        <input type="checkbox" id="isFormula-${queueId}"> 🌟 設為公式
+                    </label>
+                </div>
+                <textarea id="qText-${queueId}" rows="4" placeholder="純文字題目 (支援 Markdown 與 LaTeX，選填)">${qText}</textarea>
+                <textarea id="expText-${queueId}" rows="3" placeholder="純文字詳解 (支援 Markdown 與 LaTeX，選填)">${expText}</textarea>
                 <button class="btn-nav btn-secondary" style="align-self:flex-end; margin-top:5px; color:var(--danger-color); border:1px solid var(--danger-color);" onclick="removeQueueItem(${queueId})">移除</button>
             </div>
         `;
@@ -2328,6 +2403,7 @@
                 const metaText = document.getElementById(`meta-${qItem.id}`).value.trim();
                 const qText = document.getElementById(`qText-${qItem.id}`).value.trim();
                 const expText = document.getElementById(`expText-${qItem.id}`).value.trim();
+                const isFormula = document.getElementById(`isFormula-${qItem.id}`).checked; // 讀取公式標記
                 
                 const qImgInput = document.getElementById(`qImg-${qItem.id}`);
                 const expImgInput = document.getElementById(`expImg-${qItem.id}`);
@@ -2362,6 +2438,7 @@
                     explanationText: expText,
                     thumbnail: thumbBase64, 
                     hasExplanation: !!expBase64 || !!expText, 
+                    isFormula: isFormula, // 儲存公式標記
                     reviewCount: 0, tags: [], timestamp: baseGroupId + timeOffset, groupId: baseGroupId
                 };
                 batch.set(docRef, questionMeta);
@@ -2417,7 +2494,8 @@
 * 欄位 2 (單元名稱)：優先使用既有單元 -> [ ${unitString} ]
 * 欄位 3 (核心觀念)：優先使用既有觀念 -> [ ${conceptString} ]
 * 欄位 4 (題型)：[單選題, 多選題, 非選擇題, 題組]
-* 欄位 5 (題號備註)：寫「第X題」。`;
+* 欄位 5 (題號備註)：寫「第X題」。
+* 若有數學公式，請務必使用 LaTeX 語法：行內公式用 $...$ 包起來，獨立成行的公式用 $$...$$ 包起來。`;
 
         promptImageMode = `請幫我將照片中的「錯題」進行結構化整理。
 請注意：這題包含複雜圖表或數學符號，**請「不要」幫我打出題目與詳解的文字**（這兩個欄位請直接留白）。你只需要判斷分類標籤即可。
@@ -2435,7 +2513,8 @@
 * 欄位 2 (單元名稱)：優先使用既有單元 -> [ ${unitString} ]
 * 欄位 3 (核心觀念)：優先使用既有觀念 -> [ ${conceptString} ]
 * 欄位 4 (題型)：[單選題, 多選題, 非選擇題, 題組]
-* 欄位 5 (題號備註)：寫「第X題」。`;
+* 欄位 5 (題號備註)：寫「第X題」。
+* 若有數學公式，請務必使用 LaTeX 語法：行內公式用 $...$ 包起來，獨立成行的公式用 $$...$$ 包起來。`;
 
         switchPromptMode(currentPromptMode);
     }
