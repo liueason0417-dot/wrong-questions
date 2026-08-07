@@ -14,7 +14,7 @@
     <!-- 引入 marked.js 用於解析 Markdown 語法 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- 引入 KaTeX 用於渲染數學公式 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katecss.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     
@@ -102,6 +102,16 @@
         .question-img-container { width: 100%; height: 150px; background-color: #ffffff; position: relative; }
         .question-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.95; transition: opacity 0.2s; }
         .question-card:hover .question-img { opacity: 1; }
+        
+        /* 純文字題目的預覽樣式 */
+        .text-preview-container {
+            width: 100%; height: 100%; padding: 15px; box-sizing: border-box; overflow: hidden; position: relative;
+            color: #cbd5e1; font-size: 13px; line-height: 1.6; text-align: left; background-color: #1e293b;
+        }
+        .text-preview-container::after {
+            content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 50px;
+            background: linear-gradient(transparent, #1e293b);
+        }
 
         .tag-subject-absolute {
             position: absolute; top: 10px; right: 10px; background-color: rgba(15, 23, 42, 0.8); color: white;
@@ -123,7 +133,7 @@
         .btn-toggle-exp:hover { text-decoration: underline; }
         .explanation-img-box { display: none; margin-top: 10px; background-color: #ffffff; border-radius: 6px; overflow: hidden; }
 
-        /* --- Markdown 渲染樣式 --- */
+        /* --- Markdown & LaTeX 渲染樣式 --- */
         .markdown-body { font-family: inherit; line-height: 1.6; font-size: 14px; color: #f8fafc; }
         .markdown-body p { margin-top: 0; margin-bottom: 10px; }
         .markdown-body strong { color: var(--accent-color); font-weight: 700; }
@@ -591,33 +601,7 @@
         return tagColors[Math.abs(hash) % tagColors.length];
     }
 
-    // --- 輔助函數：安全渲染 Markdown 與 LaTeX ---
-    function renderMarkdownWithMath(text) {
-        if (!text) return "";
-        let mathBlocks = [];
-        
-        // 1. 暫時把 $$...$$ 和 $...$ 替換成特殊標記，避免被 marked.js 破壞 (例如底線 _ 被轉成 <em>)
-        let tempText = text.replace(/\$\$([\s\S]*?)\$\$/g, (match) => {
-            mathBlocks.push(match);
-            return `__MATH_BLOCK_${mathBlocks.length - 1}__`;
-        });
-        tempText = tempText.replace(/\$([\s\S]*?)\$/g, (match) => {
-            mathBlocks.push(match);
-            return `__MATH_INLINE_${mathBlocks.length - 1}__`;
-        });
-
-        // 2. 渲染 Markdown
-        let html = marked.parse(tempText);
-
-        // 3. 把數學區塊還原
-        mathBlocks.forEach((block, index) => {
-            html = html.replace(`__MATH_BLOCK_${index}__`, block);
-            html = html.replace(`__MATH_INLINE_${index}__`, block);
-        });
-
-        return html;
-    }
-
+    // --- 輔助函數：渲染 LaTeX 數學公式 ---
     function applyMathRendering(el) {
         if (typeof renderMathInElement !== 'undefined') {
             renderMathInElement(el, {
@@ -658,7 +642,7 @@
                 const item = doc.data();
                 item.id = doc.id;
                 if (typeof item.reviewCount === 'undefined') item.reviewCount = 0;
-                if (typeof item.isFormula === 'undefined') item.isFormula = false; 
+                if (typeof item.isFormula === 'undefined') item.isFormula = false; // 確保有預設值
                 if (!item.tags) item.tags = []; 
                 
                 item.tags.forEach(t => allTags.add(t));
@@ -703,7 +687,7 @@
         const sortOrder = document.getElementById("sortOrder").value;
 
         filteredSortedItems = allItemsArray.filter(item => {
-            if (showOnlyFormulas && !item.isFormula) return false; 
+            if (showOnlyFormulas && !item.isFormula) return false; // 🌟 公式庫過濾
             if (filterSub !== "全部" && item.subject !== filterSub) return false;
             if (filterTag !== "全部" && !item.tags.includes(filterTag)) return false;
             if (searchQuery) {
@@ -739,10 +723,12 @@
                         }).join('') + `</div>`;
                 }
 
+                // 判斷要顯示圖片還是純文字預覽
                 let imgHtml = '';
                 if (displayImgSrc) {
                     imgHtml = `<img class="question-img" src="${displayImgSrc}" alt="錯題縮圖">`;
                 } else if (item.questionText) {
+                    // 移除 Markdown 符號作為純文字預覽
                     const plainText = item.questionText.replace(/[#*`>]/g, '').substring(0, 80) + '...';
                     imgHtml = `<div class="text-preview-container">${plainText}</div>`;
                 } else {
@@ -781,6 +767,7 @@
             });
         }
 
+        // 渲染完畢後，套用 LaTeX 數學公式渲染
         applyMathRendering(listContainer);
 
         if(document.getElementById("chartSection").classList.contains("active")) triggerChartRebuilt();
@@ -804,7 +791,7 @@
         currentViewerId = id; 
         resetZoom(); 
         cancelAnnotation(); 
-        document.getElementById("viewerExpPanel").style.display = "none"; 
+        document.getElementById("viewerExpPanel").style.display = "none"; // 關閉詳解面板
         
         const item = window.currentItemsMap[id];
         if (!item) return;
@@ -814,10 +801,10 @@
         const viewerImg = document.getElementById("viewerImage");
         const viewerTextQuestion = document.getElementById("viewerTextQuestion");
         
-        // 為了向下相容舊資料：如果沒有圖片，但有文字，還是要顯示文字
+        // 為了向下相容舊的純文字題目：如果沒有圖片，但有文字，還是要顯示文字
         if (!item.fullImage && !item.image && item.questionText) {
             viewerTextQuestion.style.display = 'block';
-            viewerTextQuestion.innerHTML = renderMarkdownWithMath(item.questionText);
+            viewerTextQuestion.innerHTML = marked.parse(item.questionText);
             applyMathRendering(viewerTextQuestion);
         } else {
             viewerTextQuestion.style.display = 'none';
@@ -853,12 +840,14 @@
                 viewerImg.src = item.fullImage || item.image || viewerImg.src; 
             }
             
+            // 延遲等待 DOM 渲染與圖片載入
             setTimeout(() => {
                 const wrapper = document.getElementById("imageWrapper");
                 canvas.width = wrapper.offsetWidth;
                 canvas.height = wrapper.offsetHeight;
                 canvas.style.display = "block";
                 
+                // 計算初始縮放比例
                 const screenWidth = window.innerWidth;
                 const screenHeight = window.innerHeight;
                 const scaleX = (screenWidth * 0.95) / wrapper.offsetWidth;
@@ -937,13 +926,6 @@
         content.innerHTML = "<div style='text-align:center; color:var(--text-muted);'>載入中...</div>";
         panel.style.display = "block";
 
-        let expHtml = '';
-        
-        // 為了向下相容舊資料
-        if (!item.fullExplanationImage && !item.explanationImage && item.explanationText) {
-            expHtml += `<div class="markdown-body" style="font-size: 13px; color: #e2e8f0;">${renderMarkdownWithMath(item.explanationText)}</div>`;
-        }
-
         let expSrc = item.explanationImage;
         if (!expSrc && item.hasExplanation) {
             if (item.fullExplanationImage) expSrc = item.fullExplanationImage;
@@ -958,9 +940,15 @@
             }
         }
         
+        let expHtml = '';
+        
+        // 🌟 關鍵修復：強制顯示純文字詳解
+        if (item.explanationText) {
+            expHtml += `<div class="markdown-body" style="font-size: 14px; color: #f8fafc; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">${marked.parse(item.explanationText)}</div>`;
+        }
+
         if (expSrc) {
-            // 加入點擊放大燈箱功能
-            expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
+            expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
             expHtml += `<div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">👆 點擊圖片可全螢幕放大</div>`;
         }
 
@@ -1138,10 +1126,6 @@
     function loadBaseAnnotation(src) {
         baseAnnotationImg = new Image();
         baseAnnotationImg.onload = () => {
-            const viewerImg = document.getElementById("viewerImage");
-            canvas.width = viewerImg.naturalWidth || 800;
-            canvas.height = viewerImg.naturalHeight || 600;
-            canvas.style.display = "block"; 
             drawHistory = [];
             redrawCanvas();
         };
@@ -1161,12 +1145,6 @@
             btn.classList.add("active"); btn.innerText = "✏️ 標註中...";
             tools.style.display = "flex";
             
-            if (!canvas.width || canvas.width === 300) {
-                const wrapper = document.getElementById("imageWrapper");
-                canvas.width = wrapper.offsetWidth || 800;
-                canvas.height = wrapper.offsetHeight || 600;
-            }
-            canvas.style.display = "block";
             canvas.style.pointerEvents = "auto"; 
             container.style.cursor = 'crosshair';
             setTool('free');
@@ -1656,36 +1634,61 @@
 
     /* --- 卡片點擊與多選邏輯 --- */
     window.toggleExplanation = async function(event, id) {
-        event.stopPropagation(); const box = document.getElementById(`exp-${id}`); const btn = document.getElementById(`btn-exp-${id}`); const item = window.currentItemsMap[id];
+        event.stopPropagation(); 
+        const box = document.getElementById(`exp-${id}`); 
+        const btn = document.getElementById(`btn-exp-${id}`); 
+        const item = window.currentItemsMap[id];
+        
         if (box.style.display === "none" || box.style.display === "") {
             btn.innerText = "載入中..."; 
             
-            let expHtml = '';
-            if (item.explanationText) {
-                expHtml += `<div class="markdown-body" style="padding:12px; background:rgba(255,255,255,0.05); border-radius:6px; margin-bottom:10px;">${renderMarkdownWithMath(item.explanationText)}</div>`;
-            }
-
             let expSrc = item.explanationImage;
+            // 1. 先確保圖片已經從資料庫抓下來
             if (!expSrc && item.hasExplanation) {
-                if (item.fullExplanationImage) expSrc = item.fullExplanationImage;
-                else {
+                if (item.fullExplanationImage) {
+                    expSrc = item.fullExplanationImage;
+                } else {
                     try {
                         const imgDoc = await db.collection("question_images").doc(id).get();
-                        if (imgDoc.exists) { expSrc = imgDoc.data().explanationImage; item.fullExplanationImage = expSrc; item.fullImage = imgDoc.data().image; item.fullImageLoaded = true; }
+                        if (imgDoc.exists) { 
+                            expSrc = imgDoc.data().explanationImage; 
+                            item.fullExplanationImage = expSrc; 
+                        }
                     } catch(e) { console.error("詳解載入失敗", e); }
                 }
             }
-            if (expSrc) {
-                expHtml += `<img class="question-img" src="${expSrc}" alt="詳解" style="border-radius: 4px;">`;
+
+            let expHtml = '';
+            
+            // 🌟 關鍵修復：強制顯示純文字詳解 (解決舊資料圖片全白的問題)
+            if (item.explanationText) {
+                expHtml += `<div class="markdown-body" style="font-size: 13px; color: #334155; padding: 12px; background-color: #f8fafc; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">${marked.parse(item.explanationText)}</div>`;
             }
 
-            if (expHtml) { 
-                box.innerHTML = expHtml; box.style.display = "block"; btn.innerText = "隱藏詳解"; 
-                applyMathRendering(box);
-            } else { 
+            // 顯示圖片
+            if (expSrc) {
+                expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
+                expHtml += `<div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">👆 點擊圖片可全螢幕放大</div>`;
+            }
+
+            if (expHtml) {
+                box.innerHTML = expHtml; 
+                box.style.display = "block"; 
+                btn.innerText = "隱藏詳解"; 
+                applyMathRendering(box); // 渲染 LaTeX
+            } else {
                 btn.innerText = "無詳解內容"; 
             }
-        } else { box.style.display = "none"; btn.innerText = "看詳解"; }
+        } else { 
+            box.style.display = "none"; 
+            btn.innerText = "看詳解"; 
+        }
+    }
+
+    // 顯示詳解燈箱
+    window.showExpLightbox = function(src) {
+        document.getElementById('expLightboxImg').src = src;
+        document.getElementById('expLightbox').style.display = 'flex';
     }
 
     function handleCardClick(e, id) {
@@ -1741,6 +1744,152 @@
     /* --- 匯出試卷 Modal --- */
     function openExportModal() { document.getElementById('exportModal').style.display = 'block'; }
     function closeExportModal() { document.getElementById('exportModal').style.display = 'none'; }
+
+    // --- 核心進化：將文字與圖片合併渲染成單一高畫質圖片 ---
+    async function generateQuestionImage(qText, file) {
+        if (!qText && !file) return null;
+
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'fixed'; 
+        tempDiv.style.top = '0';
+        tempDiv.style.left = '0';
+        tempDiv.style.zIndex = '-1'; 
+        tempDiv.style.width = '800px';
+        tempDiv.style.backgroundColor = '#ffffff'; 
+        tempDiv.style.color = '#000000'; 
+        tempDiv.style.padding = '40px';
+        tempDiv.style.boxSizing = 'border-box';
+        
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .export-md { font-family: sans-serif; font-size: 18px; line-height: 1.6; }
+            .export-md p { margin: 0 0 15px 0; }
+            .export-md strong { color: #2563eb; }
+            .export-md blockquote { border-left: 4px solid #cbd5e1; padding-left: 15px; margin: 10px 0; color: #475569; background: #f8fafc; padding: 10px; }
+            .export-md code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+            .katex { color: #000000 !important; } 
+        `;
+        tempDiv.appendChild(style);
+
+        if (qText) {
+            const qDiv = document.createElement('div');
+            qDiv.className = 'export-md';
+            qDiv.innerHTML = marked.parse(qText);
+            tempDiv.appendChild(qDiv);
+        }
+
+        if (file) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            img.style.margin = qText ? '20px auto 0 auto' : '0 auto';
+            tempDiv.appendChild(img);
+            
+            await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+            });
+        }
+
+        const blankDiv = document.createElement('div');
+        blankDiv.style.height = '350px';
+        blankDiv.style.marginTop = '30px';
+        blankDiv.style.border = '2px dashed #cbd5e1';
+        blankDiv.style.borderRadius = '12px';
+        blankDiv.style.display = 'flex';
+        blankDiv.style.alignItems = 'center';
+        blankDiv.style.justifyContent = 'center';
+        blankDiv.style.color = '#94a3b8';
+        blankDiv.style.fontSize = '16px';
+        blankDiv.innerText = '✍️ 筆記與計算區';
+        tempDiv.appendChild(blankDiv);
+
+        document.body.appendChild(tempDiv);
+        applyMathRendering(tempDiv);
+
+        await new Promise(r => setTimeout(r, 500)); 
+
+        const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
+        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+
+        document.body.removeChild(tempDiv);
+        if (file) URL.revokeObjectURL(tempDiv.querySelector('img').src);
+
+        return base64;
+    }
+
+    async function generateExplanationImage(expText, file) {
+        if (!expText && !file) return null;
+
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'fixed'; 
+        tempDiv.style.top = '0';
+        tempDiv.style.left = '0';
+        tempDiv.style.zIndex = '-1';
+        tempDiv.style.width = '800px';
+        tempDiv.style.backgroundColor = '#ffffff';
+        tempDiv.style.color = '#000000';
+        tempDiv.style.padding = '40px';
+        tempDiv.style.boxSizing = 'border-box';
+        
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .export-md { font-family: sans-serif; font-size: 16px; line-height: 1.6; }
+            .export-md p { margin: 0 0 15px 0; }
+            .export-md strong { color: #2563eb; }
+            .export-md blockquote { border-left: 4px solid #cbd5e1; padding-left: 15px; margin: 10px 0; color: #475569; background: #f8fafc; padding: 10px; }
+            .export-md code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+            .katex { color: #000000 !important; }
+        `;
+        tempDiv.appendChild(style);
+
+        const title = document.createElement('strong');
+        title.style.color = '#d97706'; 
+        title.style.fontSize = '20px';
+        title.style.display = 'block';
+        title.style.marginBottom = '20px';
+        title.style.borderBottom = '2px solid #fde68a';
+        title.style.paddingBottom = '10px';
+        title.innerText = '💡 解答與解析';
+        tempDiv.appendChild(title);
+
+        if (expText) {
+            const expDiv = document.createElement('div');
+            expDiv.className = 'export-md';
+            expDiv.innerHTML = marked.parse(expText);
+            tempDiv.appendChild(expDiv);
+        }
+
+        if (file) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            img.style.margin = expText ? '20px auto 0 auto' : '0 auto';
+            tempDiv.appendChild(img);
+            
+            await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+            });
+        }
+
+        document.body.appendChild(tempDiv);
+        applyMathRendering(tempDiv);
+
+        await new Promise(r => setTimeout(r, 500));
+
+        const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
+        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+
+        document.body.removeChild(tempDiv);
+        if (file) URL.revokeObjectURL(tempDiv.querySelector('img').src);
+
+        return base64;
+    }
 
     async function mergeImagesToBase64(baseSrc, annoSrcs) {
         return new Promise((resolve) => {
@@ -1843,8 +1992,9 @@
                             </div>
                         `;
                         
-                        if (item.questionText) {
-                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${renderMarkdownWithMath(item.questionText)}</div>`;
+                        // 為了向下相容舊資料
+                        if (item.questionText && !item.fullImage && !item.image) {
+                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${marked.parse(item.questionText)}</div>`;
                         }
                     });
 
@@ -1868,11 +2018,12 @@
                         const expImgSrc = item.fullExplanationImage || item.explanationImage;
                         const expText = item.explanationText;
                         
-                        if (expImgSrc || expText) {
+                        if (expImgSrc || (expText && !expImgSrc)) {
                             contentHtml += `<div style="margin-top: 15px;"><div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>`;
                             
+                            // 🌟 關鍵修復：強制顯示純文字詳解
                             if (expText) {
-                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">${renderMarkdownWithMath(expText)}</div>`;
+                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px; border: 1px solid #e2e8f0;">${marked.parse(expText)}</div>`;
                             }
                             
                             if (expImgSrc && !expMap.has(expImgSrc)) {
@@ -1896,8 +2047,8 @@
                                 Q${questionCounter + idx}. 【${item.subject}】${item.concept} <span style="font-size:12px; color:#666;">(${item.unit})</span>
                             </div>
                         `;
-                        if (item.questionText) {
-                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${renderMarkdownWithMath(item.questionText)}</div>`;
+                        if (item.questionText && !item.fullImage && !item.image) {
+                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${marked.parse(item.questionText)}</div>`;
                         }
                     });
 
@@ -1933,7 +2084,7 @@
                         const expText = item.explanationText;
                         const hasNotes = item.notes && item.notes.trim() !== "";
                         
-                        if (expImgSrc || expText || hasNotes) {
+                        if (expImgSrc || (expText && !expImgSrc) || hasNotes) {
                             contentHtml += `
                                 <div style="page-break-inside: avoid; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
                                     <div style="font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #333;">
@@ -1942,13 +2093,14 @@
                                     ${hasNotes ? `<div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 8px; border-left: 3px solid #6366f1; margin-bottom: 10px;">備註: ${item.notes}</div>` : ''}
                             `;
                             
+                            // 🌟 關鍵修復：強制顯示純文字詳解
                             if (expText) {
-                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 10px;">${renderMarkdownWithMath(expText)}</div>`;
+                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 10px; background: #f8fafc; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0;">${marked.parse(expText)}</div>`;
                             }
                             
                             if (expImgSrc) {
                                 imagesToPreload.add(expImgSrc);
-                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" /></div>`;
+                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
                             }
                             contentHtml += `</div>`;
                         } else {
@@ -1990,8 +2142,6 @@
             tempContainer.style.left = '0';
             tempContainer.style.width = '800px';
             tempContainer.style.zIndex = '-9999';
-            tempContainer.style.opacity = '0';
-            tempContainer.style.pointerEvents = 'none';
             tempContainer.style.backgroundColor = '#ffffff';
             tempContainer.innerHTML = contentHtml;
             document.body.appendChild(tempContainer);
@@ -2056,7 +2206,7 @@
                 items.forEach(item => {
                     headersHtml += `<h3 style="color: #333; margin-bottom: 5px; font-family: sans-serif;">【${item.subject}】${item.unit} - ${item.concept}</h3>`;
                     if (item.notes) headersHtml += `<p style="color: #555; font-size: 14px; margin-bottom: 10px; font-family: sans-serif;">備註: ${item.notes}</p>`;
-                    if (item.questionText) headersHtml += `<div style="margin-bottom: 10px; font-family: sans-serif;">${renderMarkdownWithMath(item.questionText)}</div>`;
+                    if (item.questionText && !item.fullImage && !item.image) headersHtml += `<div style="margin-bottom: 10px; font-family: sans-serif;">${marked.parse(item.questionText)}</div>`;
                 });
 
                 let mergedImgSrc = null;
@@ -2399,17 +2549,15 @@
         if (!qText && !file) return null;
 
         const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
+        tempDiv.style.position = 'fixed'; 
         tempDiv.style.top = '0';
         tempDiv.style.left = '0';
+        tempDiv.style.zIndex = '-1'; 
         tempDiv.style.width = '800px';
         tempDiv.style.backgroundColor = '#ffffff'; 
         tempDiv.style.color = '#000000'; 
         tempDiv.style.padding = '40px';
         tempDiv.style.boxSizing = 'border-box';
-        tempDiv.style.zIndex = '-9999';
-        tempDiv.style.opacity = '0';
-        tempDiv.style.pointerEvents = 'none';
         
         const style = document.createElement('style');
         style.innerHTML = `
@@ -2425,7 +2573,7 @@
         if (qText) {
             const qDiv = document.createElement('div');
             qDiv.className = 'export-md';
-            qDiv.innerHTML = renderMarkdownWithMath(qText);
+            qDiv.innerHTML = marked.parse(qText);
             tempDiv.appendChild(qDiv);
         }
 
@@ -2460,8 +2608,7 @@
         document.body.appendChild(tempDiv);
         applyMathRendering(tempDiv);
 
-        await document.fonts.ready;
-        await new Promise(r => setTimeout(r, 300)); 
+        await new Promise(r => setTimeout(r, 500)); 
 
         const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
         const base64 = canvas.toDataURL('image/jpeg', 0.85);
@@ -2476,17 +2623,15 @@
         if (!expText && !file) return null;
 
         const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
+        tempDiv.style.position = 'fixed'; 
         tempDiv.style.top = '0';
         tempDiv.style.left = '0';
+        tempDiv.style.zIndex = '-1';
         tempDiv.style.width = '800px';
         tempDiv.style.backgroundColor = '#ffffff';
         tempDiv.style.color = '#000000';
         tempDiv.style.padding = '40px';
         tempDiv.style.boxSizing = 'border-box';
-        tempDiv.style.zIndex = '-9999';
-        tempDiv.style.opacity = '0';
-        tempDiv.style.pointerEvents = 'none';
         
         const style = document.createElement('style');
         style.innerHTML = `
@@ -2512,7 +2657,7 @@
         if (expText) {
             const expDiv = document.createElement('div');
             expDiv.className = 'export-md';
-            expDiv.innerHTML = renderMarkdownWithMath(expText);
+            expDiv.innerHTML = marked.parse(expText);
             tempDiv.appendChild(expDiv);
         }
 
@@ -2534,8 +2679,7 @@
         document.body.appendChild(tempDiv);
         applyMathRendering(tempDiv);
 
-        await document.fonts.ready;
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 500));
 
         const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
         const base64 = canvas.toDataURL('image/jpeg', 0.85);
@@ -2637,6 +2781,14 @@
         items.forEach(item => { if (item.unit) unitSet.add(item.unit); if (item.concept) conceptSet.add(item.concept); });
         let unitString = Array.from(unitSet).join("、") || "無既有單元"; let conceptString = Array.from(conceptSet).join("、") || "無既有觀念";
         
+        const mathRule = `
+【⚠️ 數學語法嚴格要求 (極度重要)】
+只要句子中出現「任何」數字、變數、算式或數學符號（例如階乘、排列組合 P/C、分數），請「絕對」要使用 LaTeX 語法，並用 $ 包起來！
+❌ 錯誤示範：有 3! = 6 種方法，P^6_4 = 360。
+✅ 正確示範：有 $3! = 6$ 種方法，$P^6_4 = 360$。
+獨立成行的長算式請用 $$ 包起來。
+* 為了方便我複製，請務必將最終結果放在「程式碼區塊 (Code Block)」中輸出。`;
+
         promptTextMode = `請幫我將照片中的「錯題」進行結構化整理。
 請針對每一題，嚴格使用以下格式輸出（不要加上額外的引言或 Markdown 程式碼區塊符號）：
 
@@ -2645,21 +2797,15 @@
 題目：
 (請完整打出題目與選項文字，如果是閱讀測驗請包含文章。請用 Markdown 排版)
 詳解：
-(請用 Markdown 排版寫出詳解。若照片無詳解請自行提供)
-
-【⚠️ 數學與符號極度重要規範】
-只要遇到「任何」數字、英文字母代號、數學算式、符號（如 \\times, \\div, 排列組合 P, C, 階乘 ! 等），**請務必、絕對要用 $ 符號包起來**！
-❌ 錯誤示範：3! \\times 2! = 12
-✅ 正確示範：$3! \\times 2! = 12$
-❌ 錯誤示範：P^6_4
-✅ 正確示範：$P^6_4$
+(請用 Markdown 排版寫出詳解。若照片無詳解請自行提供完整計算過程與最終答案)
 
 【限制清單】
 * 欄位 1 (科目)：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
 * 欄位 2 (單元名稱)：優先使用既有單元 -> [ ${unitString} ]
 * 欄位 3 (核心觀念)：優先使用既有觀念 -> [ ${conceptString} ]
 * 欄位 4 (題型)：[單選題, 多選題, 非選擇題, 題組]
-* 欄位 5 (題號備註)：寫「第X題」。`;
+* 欄位 5 (題號備註)：寫「第X題」。
+${mathRule}`;
 
         promptImageMode = `請幫我將照片中的「錯題」進行結構化整理。
 請注意：這題包含複雜圖表或數學符號，**請「不要」幫我打出題目與詳解的文字**（這兩個欄位請直接留白）。你只需要判斷分類標籤即可。
@@ -2672,17 +2818,13 @@
 詳解：
 (留白)
 
-【⚠️ 數學與符號極度重要規範】
-若你在備註或其他地方需要打出數學符號，**請務必、絕對要用 $ 符號包起來**！
-❌ 錯誤示範：3! \\times 2! = 12
-✅ 正確示範：$3! \\times 2! = 12$
-
 【限制清單】
 * 欄位 1 (科目)：[國文, 英文, 數學, 物理, 化學, 生物, 地科, 歷史, 地理, 公民]
 * 欄位 2 (單元名稱)：優先使用既有單元 -> [ ${unitString} ]
 * 欄位 3 (核心觀念)：優先使用既有觀念 -> [ ${conceptString} ]
 * 欄位 4 (題型)：[單選題, 多選題, 非選擇題, 題組]
-* 欄位 5 (題號備註)：寫「第X題」。`;
+* 欄位 5 (題號備註)：寫「第X題」。
+${mathRule}`;
 
         switchPromptMode(currentPromptMode);
     }
