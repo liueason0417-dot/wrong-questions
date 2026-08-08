@@ -14,7 +14,7 @@
     <!-- 引入 marked.js 用於解析 Markdown 語法 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- 引入 KaTeX 用於渲染數學公式 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katecss.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     
@@ -236,10 +236,34 @@
         }
         .viewer-img-container:active { cursor: grabbing; }
         
-        /* 為了向下相容舊的純文字題目 */
+        /* 為了向下相容舊的純文字題目 (變成一張大計算紙) */
         .viewer-text-question {
-            background: #ffffff; padding: 30px; border-radius: 8px; color: #000000; text-align: left; 
-            width: 100%; max-width: 800px; margin: 0 auto 20px auto; box-sizing: border-box;
+            background: #ffffff; 
+            padding: 40px 40px 400px 40px; /* 🌟 下方留出 400px 的超大計算空間 */
+            border-radius: 8px; color: #000000; text-align: left; 
+            width: 90vw; max-width: 800px; 
+            min-height: 70vh; /* 🌟 確保這張紙至少有螢幕 70% 的高度 */
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin: 0; /* 移除 margin，交給外層 wrapper 置中 */
+        }
+
+        /* 🌟 修復：強制白色計算紙上的 Markdown 與數學公式變成黑色 */
+        .viewer-text-question {
+            color: #000000 !important;
+        }
+        .viewer-text-question .katex {
+            color: #000000 !important;
+        }
+        .viewer-text-question code {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1;
+        }
+        .viewer-text-question blockquote {
+            background-color: #f8fafc !important;
+            color: #475569 !important;
+            border-left-color: #cbd5e1 !important;
         }
 
         .image-wrapper { position: relative; display: inline-block; transform-origin: top center; margin: 0 auto; }
@@ -514,10 +538,10 @@
         </div>
         
         <div class="viewer-img-container" id="viewerImgContainer">
-            <!-- 為了向下相容舊的純文字題目 -->
-            <div id="viewerTextQuestion" class="viewer-text-question markdown-body" style="display:none;"></div>
-            
             <div class="image-wrapper" id="imageWrapper">
+                <!-- 🌟 把文字題目移到畫布容器裡面，這樣畫布才能覆蓋它 -->
+                <div id="viewerTextQuestion" class="viewer-text-question markdown-body" style="display:none;"></div>
+                
                 <img id="viewerImage" src="" alt="放大圖片">
                 <canvas id="annotationCanvas"></canvas>
                 <input type="text" id="textAnnotationInput" placeholder="輸入文字後按 Enter...">
@@ -800,9 +824,15 @@
         
         const viewerImg = document.getElementById("viewerImage");
         const viewerTextQuestion = document.getElementById("viewerTextQuestion");
+        const imageWrapper = document.getElementById("imageWrapper");
         
-        // 為了向下相容舊的純文字題目：如果沒有圖片，但有文字，還是要顯示文字
-        if (!item.fullImage && !item.image && item.questionText) {
+        // 偵測是否為舊版 Bug 產生的「全白圖片」
+        let imgSrc = item.fullImage || item.image || item.thumbnail;
+        let isCorruptedImage = (imgSrc && !imgSrc.startsWith('http') && imgSrc.length < 15000);
+        let hasValidImage = imgSrc && !isCorruptedImage;
+
+        // 處理純文字題目的顯示
+        if (item.questionText) {
             viewerTextQuestion.style.display = 'block';
             viewerTextQuestion.innerHTML = marked.parse(item.questionText);
             applyMathRendering(viewerTextQuestion);
@@ -812,17 +842,21 @@
         }
 
         // 處理圖片顯示
-        if (item.thumbnail || item.image) {
-            viewerImg.src = item.thumbnail || item.image; 
+        if (hasValidImage) {
+            viewerImg.src = imgSrc; 
             viewerImg.style.display = "block";
         } else {
             viewerImg.src = "";
             viewerImg.style.display = "none";
         }
 
+        // 🌟 永遠顯示 imageWrapper，因為畫布(Canvas)在裡面！
+        imageWrapper.style.display = "inline-block";
+
         renderViewerMetadata(id); 
         document.getElementById("imageViewerModal").style.display = "block";
 
+        // 嘗試抓取高畫質原圖
         if (!item.fullImageLoaded && !item.image && (item.thumbnail || item.hasExplanation)) {
             try {
                 const imgDoc = await db.collection("question_images").doc(id).get();
@@ -831,26 +865,28 @@
                     item.fullExplanationImage = imgDoc.data().explanationImage; 
                     item.annotationImage = imgDoc.data().annotationImage || ""; 
                     item.fullImageLoaded = true;
+                    
+                    let fetchedImgSrc = item.fullImage;
+                    let fetchedIsCorrupted = (fetchedImgSrc && !fetchedImgSrc.startsWith('http') && fetchedImgSrc.length < 15000);
+                    if (fetchedImgSrc && !fetchedIsCorrupted && currentViewerId === id) {
+                        viewerImg.src = fetchedImgSrc;
+                        viewerImg.style.display = "block";
+                    }
                 }
             } catch(err) { console.error("抓取圖片失敗", err); }
         }
 
         if (currentViewerId === id) { 
-            if (item.fullImage || item.image) {
-                viewerImg.src = item.fullImage || item.image || viewerImg.src; 
-            }
-            
             // 延遲等待 DOM 渲染與圖片載入
             setTimeout(() => {
-                const wrapper = document.getElementById("imageWrapper");
-                canvas.width = wrapper.offsetWidth;
-                canvas.height = wrapper.offsetHeight;
+                // 重新校準畫布大小 (會自動貼合文字紙張或圖片的大小)
+                canvas.width = imageWrapper.offsetWidth;
+                canvas.height = imageWrapper.offsetHeight;
                 canvas.style.display = "block";
                 
                 // 計算初始縮放比例
                 const screenWidth = window.innerWidth;
-                const screenHeight = window.innerHeight;
-                const scaleX = (screenWidth * 0.95) / wrapper.offsetWidth;
+                const scaleX = (screenWidth * 0.95) / imageWrapper.offsetWidth;
                 currentZoom = Math.min(scaleX, 1); 
                 currentPanX = 0;
                 currentPanY = 0;
@@ -942,14 +978,14 @@
         
         let expHtml = '';
         
-        // 🌟 關鍵修復：強制顯示純文字詳解
-        if (item.explanationText) {
-            expHtml += `<div class="markdown-body" style="font-size: 14px; color: #f8fafc; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">${marked.parse(item.explanationText)}</div>`;
-        }
+        // 🌟 核心修復：偵測是否為舊版 Bug 產生的「全白圖片」
+        let isCorruptedImage = (expSrc && expSrc.length < 15000);
 
-        if (expSrc) {
+        if (expSrc && !isCorruptedImage) {
             expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
             expHtml += `<div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">👆 點擊圖片可全螢幕放大</div>`;
+        } else if (item.explanationText) {
+            expHtml += `<div class="markdown-body" style="font-size: 14px; color: #f8fafc; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">${marked.parse(item.explanationText)}</div>`;
         }
 
         if (expHtml) {
@@ -1643,7 +1679,6 @@
             btn.innerText = "載入中..."; 
             
             let expSrc = item.explanationImage;
-            // 1. 先確保圖片已經從資料庫抓下來
             if (!expSrc && item.hasExplanation) {
                 if (item.fullExplanationImage) {
                     expSrc = item.fullExplanationImage;
@@ -1660,15 +1695,16 @@
 
             let expHtml = '';
             
-            // 🌟 關鍵修復：強制顯示純文字詳解 (解決舊資料圖片全白的問題)
-            if (item.explanationText) {
-                expHtml += `<div class="markdown-body" style="font-size: 13px; color: #334155; padding: 12px; background-color: #f8fafc; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">${marked.parse(item.explanationText)}</div>`;
-            }
+            // 🌟 核心修復：偵測是否為舊版 Bug 產生的「全白圖片」
+            let isCorruptedImage = (expSrc && expSrc.length < 15000);
 
-            // 顯示圖片
-            if (expSrc) {
-                expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
+            if (expSrc && !isCorruptedImage) {
+                // 正常圖片
+                expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
                 expHtml += `<div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">👆 點擊圖片可全螢幕放大</div>`;
+            } else if (item.explanationText) {
+                // 圖片壞掉(白紙)或是沒有圖片，顯示純文字
+                expHtml += `<div class="markdown-body" style="font-size: 13px; color: #334155; padding: 12px; background-color: #f8fafc; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">${marked.parse(item.explanationText)}</div>`;
             }
 
             if (expHtml) {
@@ -1750,14 +1786,14 @@
         if (!qText && !file) return null;
 
         const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'fixed'; 
+        tempDiv.style.position = 'absolute'; 
         tempDiv.style.top = '0';
-        tempDiv.style.left = '0';
-        tempDiv.style.zIndex = '-1'; 
+        tempDiv.style.left = '-9999px'; 
         tempDiv.style.width = '800px';
         tempDiv.style.backgroundColor = '#ffffff'; 
         tempDiv.style.color = '#000000'; 
-        tempDiv.style.padding = '40px';
+        // 🌟 關鍵修改：把 padding-bottom 設為 400px，讓白色背景自然往下延伸，提供計算空間
+        tempDiv.style.padding = '40px 40px 400px 40px';
         tempDiv.style.boxSizing = 'border-box';
         
         const style = document.createElement('style');
@@ -1793,18 +1829,7 @@
             });
         }
 
-        const blankDiv = document.createElement('div');
-        blankDiv.style.height = '350px';
-        blankDiv.style.marginTop = '30px';
-        blankDiv.style.border = '2px dashed #cbd5e1';
-        blankDiv.style.borderRadius = '12px';
-        blankDiv.style.display = 'flex';
-        blankDiv.style.alignItems = 'center';
-        blankDiv.style.justifyContent = 'center';
-        blankDiv.style.color = '#94a3b8';
-        blankDiv.style.fontSize = '16px';
-        blankDiv.innerText = '✍️ 筆記與計算區';
-        tempDiv.appendChild(blankDiv);
+        // 🌟 已經刪除原本的「虛線筆記區框框」
 
         document.body.appendChild(tempDiv);
         applyMathRendering(tempDiv);
@@ -1824,13 +1849,13 @@
         if (!expText && !file) return null;
 
         const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'fixed'; 
+        tempDiv.style.position = 'absolute'; 
         tempDiv.style.top = '0';
-        tempDiv.style.left = '0';
-        tempDiv.style.zIndex = '-1';
+        tempDiv.style.left = '-9999px';
         tempDiv.style.width = '800px';
         tempDiv.style.backgroundColor = '#ffffff';
         tempDiv.style.color = '#000000';
+        // 🌟 詳解區不需要留白，所以 padding 恢復正常
         tempDiv.style.padding = '40px';
         tempDiv.style.boxSizing = 'border-box';
         
@@ -2021,9 +2046,8 @@
                         if (expImgSrc || (expText && !expImgSrc)) {
                             contentHtml += `<div style="margin-top: 15px;"><div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>`;
                             
-                            // 🌟 關鍵修復：強制顯示純文字詳解
-                            if (expText) {
-                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px; border: 1px solid #e2e8f0;">${marked.parse(expText)}</div>`;
+                            if (expText && !expImgSrc) {
+                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
                             }
                             
                             if (expImgSrc && !expMap.has(expImgSrc)) {
@@ -2093,14 +2117,13 @@
                                     ${hasNotes ? `<div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 8px; border-left: 3px solid #6366f1; margin-bottom: 10px;">備註: ${item.notes}</div>` : ''}
                             `;
                             
-                            // 🌟 關鍵修復：強制顯示純文字詳解
-                            if (expText) {
-                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 10px; background: #f8fafc; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0;">${marked.parse(expText)}</div>`;
+                            if (expText && !expImgSrc) {
+                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
                             }
                             
                             if (expImgSrc) {
                                 imagesToPreload.add(expImgSrc);
-                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
+                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" /></div>`;
                             }
                             contentHtml += `</div>`;
                         } else {
@@ -2549,14 +2572,14 @@
         if (!qText && !file) return null;
 
         const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'fixed'; 
+        tempDiv.style.position = 'absolute'; 
         tempDiv.style.top = '0';
-        tempDiv.style.left = '0';
-        tempDiv.style.zIndex = '-1'; 
+        tempDiv.style.left = '-9999px'; 
         tempDiv.style.width = '800px';
         tempDiv.style.backgroundColor = '#ffffff'; 
         tempDiv.style.color = '#000000'; 
-        tempDiv.style.padding = '40px';
+        // 🌟 關鍵修改：把 padding-bottom 設為 400px，讓白色背景自然往下延伸，提供計算空間
+        tempDiv.style.padding = '40px 40px 400px 40px';
         tempDiv.style.boxSizing = 'border-box';
         
         const style = document.createElement('style');
@@ -2592,18 +2615,7 @@
             });
         }
 
-        const blankDiv = document.createElement('div');
-        blankDiv.style.height = '350px';
-        blankDiv.style.marginTop = '30px';
-        blankDiv.style.border = '2px dashed #cbd5e1';
-        blankDiv.style.borderRadius = '12px';
-        blankDiv.style.display = 'flex';
-        blankDiv.style.alignItems = 'center';
-        blankDiv.style.justifyContent = 'center';
-        blankDiv.style.color = '#94a3b8';
-        blankDiv.style.fontSize = '16px';
-        blankDiv.innerText = '✍️ 筆記與計算區';
-        tempDiv.appendChild(blankDiv);
+        // 🌟 已經刪除原本的「虛線筆記區框框」
 
         document.body.appendChild(tempDiv);
         applyMathRendering(tempDiv);
@@ -2623,13 +2635,13 @@
         if (!expText && !file) return null;
 
         const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'fixed'; 
+        tempDiv.style.position = 'absolute'; 
         tempDiv.style.top = '0';
-        tempDiv.style.left = '0';
-        tempDiv.style.zIndex = '-1';
+        tempDiv.style.left = '-9999px';
         tempDiv.style.width = '800px';
         tempDiv.style.backgroundColor = '#ffffff';
         tempDiv.style.color = '#000000';
+        // 🌟 詳解區不需要留白，所以 padding 恢復正常
         tempDiv.style.padding = '40px';
         tempDiv.style.boxSizing = 'border-box';
         
