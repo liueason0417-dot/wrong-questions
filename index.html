@@ -487,9 +487,9 @@
         <p style="color: var(--text-muted); font-size: 12px; margin-top: 0; margin-bottom: 20px; text-align: center;">前半段純題目，最後一頁附解答，適合重新測驗</p>
 
         <button class="btn-nav btn-secondary" style="width:100%; justify-content:center; padding:15px; font-size: 15px;" onclick="batchExportWord(this)">
-            📄 匯出 Word (純題目)
+            📄 匯出 Word (實戰測驗模式)
         </button>
-        <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px; margin-bottom: 0; text-align: center;">適合需要手動重新排版或編輯題目的情境</p>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px; margin-bottom: 0; text-align: center;">前半段題目，最後附解答，適合手動重新排版</p>
     </div>
 </div>
 
@@ -2017,7 +2017,6 @@
                             </div>
                         `;
                         
-                        // 為了向下相容舊資料
                         if (item.questionText && !item.fullImage && !item.image) {
                             qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${marked.parse(item.questionText)}</div>`;
                         }
@@ -2030,11 +2029,14 @@
                         imagesToPreload.add(mergedImgSrc);
                     }
 
+                    // 🌟 核心修改：加入 max-height: 240mm; width: auto; 強制超長圖片縮小
                     contentHtml += `
-                        <div style="page-break-inside: avoid; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eee;">
-                            ${headersHtml}
-                            ${qTextHtml}
-                            ${mergedImgSrc ? `<div style="margin-top: 10px; width: 100%;"><img src="${mergedImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" /></div>` : ''}
+                        <div style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eee;">
+                            <div style="page-break-inside: avoid;">
+                                ${headersHtml}
+                                ${qTextHtml}
+                            </div>
+                            ${mergedImgSrc ? `<div style="page-break-inside: avoid; margin-top: 10px; width: 100%; text-align: center;"><img src="${mergedImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>` : ''}
                     `;
 
                     const expMap = new Set();
@@ -2044,7 +2046,7 @@
                         const expText = item.explanationText;
                         
                         if (expImgSrc || (expText && !expImgSrc)) {
-                            contentHtml += `<div style="margin-top: 15px;"><div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>`;
+                            contentHtml += `<div style="page-break-inside: avoid; margin-top: 15px;"><div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>`;
                             
                             if (expText && !expImgSrc) {
                                 contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
@@ -2053,7 +2055,8 @@
                             if (expImgSrc && !expMap.has(expImgSrc)) {
                                 expMap.add(expImgSrc);
                                 imagesToPreload.add(expImgSrc);
-                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
+                                // 🌟 核心修改：詳解圖片也加入 max-height: 240mm;
+                                contentHtml += `<div style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
                             }
                             contentHtml += `</div>`;
                         }
@@ -2083,11 +2086,14 @@
                         imagesToPreload.add(mergedImgSrc);
                     }
 
+                    // 🌟 核心修改：實戰卷的題目圖片加入 max-height: 240mm;
                     contentHtml += `
-                        <div style="page-break-inside: avoid; margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px dashed #cccccc;">
-                            ${headersHtml}
-                            ${qTextHtml}
-                            ${mergedImgSrc ? `<div style="margin-top: 10px; width: 100%;"><img src="${mergedImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" /></div>` : ''}
+                        <div style="margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px dashed #cccccc;">
+                            <div style="page-break-inside: avoid;">
+                                ${headersHtml}
+                                ${qTextHtml}
+                            </div>
+                            ${mergedImgSrc ? `<div style="page-break-inside: avoid; margin-top: 10px; width: 100%; text-align: center;"><img src="${mergedImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>` : ''}
                         </div>
                     `;
                     questionCounter += items.length;
@@ -2123,7 +2129,8 @@
                             
                             if (expImgSrc) {
                                 imagesToPreload.add(expImgSrc);
-                                contentHtml += `<div style="width: 100%;"><img src="${expImgSrc}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" /></div>`;
+                                // 🌟 核心修改：實戰卷的詳解圖片加入 max-height: 240mm;
+                                contentHtml += `<div style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>`;
                             }
                             contentHtml += `</div>`;
                         } else {
@@ -2159,15 +2166,18 @@
 
             btn.innerText = "⏳ 產生 PDF 中...";
             
+            const hiddenWrapper = document.createElement('div');
+            hiddenWrapper.style.position = 'absolute';
+            hiddenWrapper.style.top = '-9999px';
+            hiddenWrapper.style.left = '-9999px';
+            
             const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.top = '0';
-            tempContainer.style.left = '0';
             tempContainer.style.width = '800px';
-            tempContainer.style.zIndex = '-9999';
             tempContainer.style.backgroundColor = '#ffffff';
             tempContainer.innerHTML = contentHtml;
-            document.body.appendChild(tempContainer);
+            
+            hiddenWrapper.appendChild(tempContainer);
+            document.body.appendChild(hiddenWrapper);
             
             applyMathRendering(tempContainer); 
 
@@ -2177,12 +2187,12 @@
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true, logging: false },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+                pagebreak:    { mode: ['css', 'legacy'] }
             };
 
             await html2pdf().set(opt).from(tempContainer).save();
             
-            document.body.removeChild(tempContainer);
+            document.body.removeChild(hiddenWrapper);
             closeExportModal();
             cancelSelection();
 
@@ -2195,7 +2205,7 @@
         }
     }
 
-    /* --- 匯出 Word --- */
+    /* --- 匯出 Word (實戰測驗模式) --- */
     async function batchExportWord(btn) {
         if (selectedCardIds.size === 0) return;
         
@@ -2223,13 +2233,18 @@
                 imageMap.get(imgKey).push(item);
             }
 
-            let contentHtml = "";
+            let contentHtml = `<h1 style="text-align: center; font-family: sans-serif; margin-bottom: 30px;">學測錯題實戰卷</h1>`;
+            let questionCounter = 1;
+
+            // --- 第一階段：印出所有題目 ---
             for (let [imgKey, items] of imageMap.entries()) {
                 let headersHtml = '';
-                items.forEach(item => {
-                    headersHtml += `<h3 style="color: #333; margin-bottom: 5px; font-family: sans-serif;">【${item.subject}】${item.unit} - ${item.concept}</h3>`;
-                    if (item.notes) headersHtml += `<p style="color: #555; font-size: 14px; margin-bottom: 10px; font-family: sans-serif;">備註: ${item.notes}</p>`;
-                    if (item.questionText && !item.fullImage && !item.image) headersHtml += `<div style="margin-bottom: 10px; font-family: sans-serif;">${marked.parse(item.questionText)}</div>`;
+                let qTextHtml = '';
+                items.forEach((item, idx) => {
+                    headersHtml += `<h3 style="color: #333; margin-bottom: 5px; font-family: sans-serif;">Q${questionCounter + idx}. 【${item.subject}】${item.unit} - ${item.concept}</h3>`;
+                    if (item.questionText && !item.fullImage && !item.image) {
+                        qTextHtml += `<div style="margin-bottom: 10px; font-family: sans-serif;">${marked.parse(item.questionText)}</div>`;
+                    }
                 });
 
                 let mergedImgSrc = null;
@@ -2238,23 +2253,74 @@
                     mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
                 }
 
+                // 🌟 核心修改：使用傳統 HTML 屬性 width="560" (約 14.8 公分)，強制 Word 縮小圖片
                 contentHtml += `
                     <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #ccc;">
                         ${headersHtml}
-                        ${mergedImgSrc ? `<p><img src="${mergedImgSrc}" style="max-width: 600px; width: 100%; height: auto;" /></p>` : ''}
+                        ${qTextHtml}
+                        ${mergedImgSrc ? `<p style="text-align: center;"><img src="${mergedImgSrc}" width="560" /></p>` : ''}
                         <br><br>
                     </div>
                 `;
+                questionCounter += items.length;
             }
 
+            // --- 插入 Word 專用的換頁符號 ---
+            contentHtml += `<br clear="all" style="page-break-before:always" />`;
+            contentHtml += `<h1 style="text-align: center; font-family: sans-serif; margin-top: 30px; margin-bottom: 30px;">解答與解析</h1>`;
+
+            // --- 第二階段：印出所有詳解 ---
+            questionCounter = 1; // 重置題號計數器
+            for (let [imgKey, items] of imageMap.entries()) {
+                for (let idx = 0; idx < items.length; idx++) {
+                    const item = items[idx];
+                    const expImgSrc = item.fullExplanationImage || item.explanationImage;
+                    const expText = item.explanationText;
+                    const hasNotes = item.notes && item.notes.trim() !== "";
+                    
+                    if (expImgSrc || (expText && !expImgSrc) || hasNotes) {
+                        contentHtml += `
+                            <div style="margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                                <h3 style="color: #333; font-family: sans-serif; margin-bottom: 10px;">Q${questionCounter + idx} 解析：</h3>
+                                ${hasNotes ? `<p style="color: #444; font-size: 14px; font-family: sans-serif; background: #f9f9f9; padding: 10px; border-left: 3px solid #6366f1; margin-bottom: 15px;">備註: ${item.notes}</p>` : ''}
+                        `;
+                        
+                        if (expText && !expImgSrc) {
+                            contentHtml += `<div style="font-family: sans-serif; margin-bottom: 15px; line-height: 1.6;">${marked.parse(expText)}</div>`;
+                        }
+                        
+                        if (expImgSrc) {
+                            // 🌟 核心修改：詳解圖片也使用傳統 HTML 屬性 width="560"
+                            contentHtml += `<p style="text-align: center;"><img src="${expImgSrc}" width="560" /></p>`;
+                        }
+                        contentHtml += `</div>`;
+                    } else {
+                        contentHtml += `
+                            <div style="margin-bottom: 20px;">
+                                <p style="color: #666; font-family: sans-serif;">Q${questionCounter + idx}：無提供解析或備註。</p>
+                            </div>
+                        `;
+                    }
+                }
+                questionCounter += items.length;
+            }
+
+            // --- 渲染與匯出 ---
             const tempContainer = document.createElement('div');
             tempContainer.innerHTML = contentHtml;
             applyMathRendering(tempContainer); 
 
             const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>學測錯題實戰卷</title></head><body>";
-            const footer = "</body></html>"; const sourceHTML = header + tempContainer.innerHTML + footer;
-            const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const fileDownload = document.createElement("a");
-            fileDownload.href = url; fileDownload.download = '學測錯題實戰卷.doc'; document.body.appendChild(fileDownload); fileDownload.click();
+            const footer = "</body></html>"; 
+            const sourceHTML = header + tempContainer.innerHTML + footer;
+            
+            const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); 
+            const url = URL.createObjectURL(blob); 
+            const fileDownload = document.createElement("a");
+            fileDownload.href = url; 
+            fileDownload.download = '學測錯題實戰卷.doc'; 
+            document.body.appendChild(fileDownload); 
+            fileDownload.click();
             
             setTimeout(() => { 
                 document.body.removeChild(fileDownload); 
