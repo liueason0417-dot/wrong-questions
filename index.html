@@ -7,9 +7,7 @@
     <!-- 引入 Firebase v10 Compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-    <!-- 引入 html2pdf.js 用於直接下載 PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- 引入 html2canvas 用於將文字轉為圖片 -->
+    <!-- 引入 html2canvas 用於將文字轉為圖片 (Word專用) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- 引入 marked.js 用於解析 Markdown 語法 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -831,8 +829,8 @@
         let isCorruptedImage = (imgSrc && !imgSrc.startsWith('http') && imgSrc.length < 15000);
         let hasValidImage = imgSrc && !isCorruptedImage;
 
-        // 處理純文字題目的顯示
-        if (item.questionText) {
+        // 🌟 處理純文字題目的顯示 (相容新舊資料)
+        if (item.questionText && (item.isRawImage || (!item.fullImage && !item.image))) {
             viewerTextQuestion.style.display = 'block';
             viewerTextQuestion.innerHTML = marked.parse(item.questionText);
             applyMathRendering(viewerTextQuestion);
@@ -984,8 +982,11 @@
         if (expSrc && !isCorruptedImage) {
             expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
             expHtml += `<div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">👆 點擊圖片可全螢幕放大</div>`;
-        } else if (item.explanationText) {
-            expHtml += `<div class="markdown-body" style="font-size: 14px; color: #f8fafc; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">${marked.parse(item.explanationText)}</div>`;
+        } 
+        
+        // 🌟 處理純文字詳解的顯示 (相容新舊資料)
+        if (item.explanationText && (item.isRawImage || !expSrc || isCorruptedImage)) {
+            expHtml += `<div class="markdown-body" style="font-size: 13px; color: #334155; padding: 12px; background-color: #f8fafc; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">${marked.parse(item.explanationText)}</div>`;
         }
 
         if (expHtml) {
@@ -1702,8 +1703,10 @@
                 // 正常圖片
                 expHtml += `<img src="${expSrc}" style="max-width: 100%; height: auto; border-radius: 6px; margin-top: 10px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="showExpLightbox(this.src)" title="點擊放大檢視">`;
                 expHtml += `<div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;">👆 點擊圖片可全螢幕放大</div>`;
-            } else if (item.explanationText) {
-                // 圖片壞掉(白紙)或是沒有圖片，顯示純文字
+            } 
+            
+            // 🌟 處理純文字詳解的顯示 (相容新舊資料)
+            if (item.explanationText && (item.isRawImage || !expSrc || isCorruptedImage)) {
                 expHtml += `<div class="markdown-body" style="font-size: 13px; color: #334155; padding: 12px; background-color: #f8fafc; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">${marked.parse(item.explanationText)}</div>`;
             }
 
@@ -1781,170 +1784,115 @@
     function openExportModal() { document.getElementById('exportModal').style.display = 'block'; }
     function closeExportModal() { document.getElementById('exportModal').style.display = 'none'; }
 
-    // --- 核心進化：將文字與圖片合併渲染成單一高畫質圖片 ---
-    async function generateQuestionImage(qText, file) {
-        if (!qText && !file) return null;
-
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute'; 
-        tempDiv.style.top = '0';
-        tempDiv.style.left = '-9999px'; 
-        tempDiv.style.width = '800px';
-        tempDiv.style.backgroundColor = '#ffffff'; 
-        tempDiv.style.color = '#000000'; 
-        // 🌟 關鍵修改：把 padding-bottom 設為 400px，讓白色背景自然往下延伸，提供計算空間
-        tempDiv.style.padding = '40px 40px 400px 40px';
-        tempDiv.style.boxSizing = 'border-box';
-        
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .export-md { font-family: sans-serif; font-size: 18px; line-height: 1.6; }
-            .export-md p { margin: 0 0 15px 0; }
-            .export-md strong { color: #2563eb; }
-            .export-md blockquote { border-left: 4px solid #cbd5e1; padding-left: 15px; margin: 10px 0; color: #475569; background: #f8fafc; padding: 10px; }
-            .export-md code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-            .katex { color: #000000 !important; } 
-        `;
-        tempDiv.appendChild(style);
-
-        if (qText) {
-            const qDiv = document.createElement('div');
-            qDiv.className = 'export-md';
-            qDiv.innerHTML = marked.parse(qText);
-            tempDiv.appendChild(qDiv);
-        }
-
-        if (file) {
-            const img = document.createElement('img');
+    // --- 核心進化：單純壓縮圖片，不再把文字死死黏在圖片上 ---
+    async function compressImage(file) {
+        if (!file) return "";
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width;
+                let h = img.height;
+                const maxDim = 1600; // 限制最大解析度，保持高畫質但縮小檔案
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = h * (maxDim / w); w = maxDim; }
+                    else { w = w * (maxDim / h); h = maxDim; }
+                }
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => resolve("");
             img.src = URL.createObjectURL(file);
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = qText ? '20px auto 0 auto' : '0 auto';
-            tempDiv.appendChild(img);
-            
-            await new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = resolve;
-            });
-        }
-
-        // 🌟 已經刪除原本的「虛線筆記區框框」
-
-        document.body.appendChild(tempDiv);
-        applyMathRendering(tempDiv);
-
-        await new Promise(r => setTimeout(r, 500)); 
-
-        const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
-        const base64 = canvas.toDataURL('image/jpeg', 0.85);
-
-        document.body.removeChild(tempDiv);
-        if (file) URL.revokeObjectURL(tempDiv.querySelector('img').src);
-
-        return base64;
+        });
     }
 
-    async function generateExplanationImage(expText, file) {
-        if (!expText && !file) return null;
-
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute'; 
-        tempDiv.style.top = '0';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.width = '800px';
-        tempDiv.style.backgroundColor = '#ffffff';
-        tempDiv.style.color = '#000000';
-        // 🌟 詳解區不需要留白，所以 padding 恢復正常
-        tempDiv.style.padding = '40px';
-        tempDiv.style.boxSizing = 'border-box';
-        
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .export-md { font-family: sans-serif; font-size: 16px; line-height: 1.6; }
-            .export-md p { margin: 0 0 15px 0; }
-            .export-md strong { color: #2563eb; }
-            .export-md blockquote { border-left: 4px solid #cbd5e1; padding-left: 15px; margin: 10px 0; color: #475569; background: #f8fafc; padding: 10px; }
-            .export-md code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-            .katex { color: #000000 !important; }
-        `;
-        tempDiv.appendChild(style);
-
-        const title = document.createElement('strong');
-        title.style.color = '#d97706'; 
-        title.style.fontSize = '20px';
-        title.style.display = 'block';
-        title.style.marginBottom = '20px';
-        title.style.borderBottom = '2px solid #fde68a';
-        title.style.paddingBottom = '10px';
-        title.innerText = '💡 解答與解析';
-        tempDiv.appendChild(title);
-
-        if (expText) {
-            const expDiv = document.createElement('div');
-            expDiv.className = 'export-md';
-            expDiv.innerHTML = marked.parse(expText);
-            tempDiv.appendChild(expDiv);
-        }
-
-        if (file) {
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = expText ? '20px auto 0 auto' : '0 auto';
-            tempDiv.appendChild(img);
-            
-            await new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = resolve;
-            });
-        }
-
-        document.body.appendChild(tempDiv);
-        applyMathRendering(tempDiv);
-
-        await new Promise(r => setTimeout(r, 500));
-
-        const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
-        const base64 = canvas.toDataURL('image/jpeg', 0.85);
-
-        document.body.removeChild(tempDiv);
-        if (file) URL.revokeObjectURL(tempDiv.querySelector('img').src);
-
-        return base64;
-    }
-
+    // 🌟 核心進化：自動裁切圖片底部的多餘空白 (Auto-Crop)
     async function mergeImagesToBase64(baseSrc, annoSrcs) {
         return new Promise((resolve) => {
-            const validAnnos = annoSrcs.filter(src => src && src.trim() !== "");
-            if (validAnnos.length === 0) { resolve(baseSrc); return; }
-
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
             const img = new Image();
+            img.crossOrigin = "Anonymous"; // 解決跨域問題
             img.onload = () => {
                 canvas.width = img.width; 
                 canvas.height = img.height;
                 
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
                 ctx.drawImage(img, 0, 0);
+
+                const validAnnos = (annoSrcs || []).filter(src => src && src.trim() !== "");
+                
+                // 裁切底部空白的函數
+                const finalizeAndCrop = () => {
+                    try {
+                        const width = canvas.width;
+                        const height = canvas.height;
+                        const imageData = ctx.getImageData(0, 0, width, height);
+                        const data = imageData.data;
+
+                        let bottom = height;
+                        // 從底部往上掃描，尋找第一行「非純白」的像素
+                        for (let y = height - 1; y >= 0; y--) {
+                            let isWhiteRow = true;
+                            for (let x = 0; x < width; x++) {
+                                const index = (y * width + x) * 4;
+                                const r = data[index];
+                                const g = data[index + 1];
+                                const b = data[index + 2];
+                                const a = data[index + 3];
+                                // 容許些微的 JPEG 壓縮色差
+                                if (a > 10 && (r < 245 || g < 245 || b < 245)) {
+                                    isWhiteRow = false;
+                                    break;
+                                }
+                            }
+                            if (!isWhiteRow) {
+                                bottom = y + 1;
+                                break;
+                            }
+                        }
+
+                        // 加上 40px 的緩衝空白，但不能超過原圖高度
+                        bottom = Math.min(height, bottom + 40); 
+
+                        if (bottom < height) {
+                            const croppedCanvas = document.createElement('canvas');
+                            croppedCanvas.width = width;
+                            croppedCanvas.height = bottom;
+                            croppedCanvas.getContext('2d').drawImage(canvas, 0, 0, width, bottom, 0, 0, width, bottom);
+                            resolve(croppedCanvas.toDataURL('image/jpeg', 0.95));
+                        } else {
+                            resolve(canvas.toDataURL('image/jpeg', 0.95));
+                        }
+                    } catch (e) {
+                        console.warn("Auto-crop failed, returning original", e);
+                        resolve(canvas.toDataURL('image/jpeg', 0.95));
+                    }
+                };
+
+                if (validAnnos.length === 0) {
+                    finalizeAndCrop();
+                    return;
+                }
 
                 let loadedCount = 0;
                 validAnnos.forEach(src => {
                     const annoImg = new Image();
+                    annoImg.crossOrigin = "Anonymous";
                     annoImg.onload = () => {
                         ctx.drawImage(annoImg, 0, 0, canvas.width, canvas.height);
                         loadedCount++;
-                        if (loadedCount === validAnnos.length) resolve(canvas.toDataURL('image/jpeg', 0.95));
+                        if (loadedCount === validAnnos.length) finalizeAndCrop();
                     };
                     annoImg.onerror = () => {
                         loadedCount++;
-                        if (loadedCount === validAnnos.length) resolve(canvas.toDataURL('image/jpeg', 0.95));
+                        if (loadedCount === validAnnos.length) finalizeAndCrop();
                     };
                     annoImg.src = src;
                 });
@@ -1954,6 +1902,7 @@
         });
     }
 
+    // --- PDF 匯出 (純文字向量 + 乾淨原圖) ---
     async function batchExportPDF(mode, btn) {
         if (selectedCardIds.size === 0) return;
         
@@ -1982,15 +1931,7 @@
             }
 
             let contentHtml = `
-            <style>
-                .md-content { font-family: sans-serif; }
-                .md-content p { margin: 0 0 8px 0; }
-                .md-content strong { font-weight: bold; color: #000; }
-                .md-content blockquote { border-left: 4px solid #cbd5e1; padding-left: 12px; margin: 8px 0; color: #475569; background-color: #f8fafc; padding-top: 8px; padding-bottom: 8px; }
-                .md-content ul, .md-content ol { margin: 0 0 10px 0; padding-left: 24px; }
-                .md-content code { background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
-            </style>
-            <div style="padding: 15px; background-color: #ffffff; color: #000000; font-family: sans-serif;">
+            <div style="padding: 0; background-color: #ffffff; color: #000000; font-family: sans-serif;">
                 <h2 style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 30px; font-size: 24px;">
                     ${mode === 'guide' ? '學測錯題精華講義' : '學測錯題實戰卷'}
                 </h2>
@@ -2017,26 +1958,36 @@
                             </div>
                         `;
                         
-                        if (item.questionText && !item.fullImage && !item.image) {
-                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${marked.parse(item.questionText)}</div>`;
+                        // 🌟 處理純文字題目 (相容新舊資料)
+                        if (item.isRawImage) {
+                            if (item.questionText) qTextHtml += `<div class="md-content" style="margin-bottom: 15px;">${marked.parse(item.questionText)}</div>`;
+                        } else {
+                            if (item.questionText && !item.fullImage && !item.image) {
+                                qTextHtml += `<div class="md-content" style="margin-bottom: 15px;">${marked.parse(item.questionText)}</div>`;
+                            }
                         }
                     });
 
                     let mergedImgSrc = null;
-                    if (!imgKey.startsWith("text_only_")) {
+                    if (imgKey && !imgKey.startsWith("text_only_")) {
+                        // 講義模式：保留筆跡
                         const annoSrcs = items.map(i => i.annotationImage);
                         mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
                         imagesToPreload.add(mergedImgSrc);
                     }
 
-                    // 🌟 核心修改：加入 max-height: 240mm; width: auto; 強制超長圖片縮小
+                    // 🌟 圖片尺寸限制：新資料(純圖)縮小到 85%，舊資料(含文字)維持 100%
+                    const isRaw = items.some(i => i.isRawImage);
+                    const maxWidth = isRaw ? '85%' : '100%';
+
+                    // 🌟 核心修改：將 max-height 放寬到 25cm，避免長圖被過度縮小
                     contentHtml += `
                         <div style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eee;">
-                            <div style="page-break-inside: avoid;">
+                            <div class="avoid-break">
                                 ${headersHtml}
-                                ${qTextHtml}
                             </div>
-                            ${mergedImgSrc ? `<div style="page-break-inside: avoid; margin-top: 10px; width: 100%; text-align: center;"><img src="${mergedImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>` : ''}
+                            ${qTextHtml}
+                            ${mergedImgSrc ? `<div class="avoid-break" style="margin-top: 10px; width: 100%; text-align: center;"><img src="${mergedImgSrc}" style="max-width: ${maxWidth}; max-height: 25cm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>` : ''}
                     `;
 
                     const expMap = new Set();
@@ -2045,18 +1996,25 @@
                         const expImgSrc = item.fullExplanationImage || item.explanationImage;
                         const expText = item.explanationText;
                         
-                        if (expImgSrc || (expText && !expImgSrc)) {
-                            contentHtml += `<div style="page-break-inside: avoid; margin-top: 15px;"><div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>`;
+                        if (expImgSrc || expText) {
+                            contentHtml += `<div style="margin-top: 15px;"><div class="avoid-break" style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 8px;">💡 Q${questionCounter + idx} 解答與解析：</div>`;
                             
-                            if (expText && !expImgSrc) {
-                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
-                            }
-                            
-                            if (expImgSrc && !expMap.has(expImgSrc)) {
-                                expMap.add(expImgSrc);
-                                imagesToPreload.add(expImgSrc);
-                                // 🌟 核心修改：詳解圖片也加入 max-height: 240mm;
-                                contentHtml += `<div style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
+                            if (item.isRawImage) {
+                                if (expText) contentHtml += `<div class="md-content" style="background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
+                                if (expImgSrc && !expMap.has(expImgSrc)) {
+                                    expMap.add(expImgSrc);
+                                    imagesToPreload.add(expImgSrc);
+                                    // 🌟 核心修改：將 max-height 放寬到 25cm
+                                    contentHtml += `<div class="avoid-break" style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 85%; max-height: 25cm; width: auto; height: auto; object-fit: contain; display: inline-block; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
+                                }
+                            } else {
+                                if (expText && !expImgSrc) contentHtml += `<div class="md-content" style="background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
+                                if (expImgSrc && !expMap.has(expImgSrc)) {
+                                    expMap.add(expImgSrc);
+                                    imagesToPreload.add(expImgSrc);
+                                    // 🌟 核心修改：將 max-height 放寬到 25cm
+                                    contentHtml += `<div class="avoid-break" style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 25cm; width: auto; height: auto; object-fit: contain; display: inline-block; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;" /></div>`;
+                                }
                             }
                             contentHtml += `</div>`;
                         }
@@ -2065,6 +2023,7 @@
                     questionCounter += items.length;
                 }
             } else {
+                // 實戰測驗模式
                 for (let [imgKey, items] of imageMap.entries()) {
                     let headersHtml = '';
                     let qTextHtml = '';
@@ -2074,33 +2033,43 @@
                                 Q${questionCounter + idx}. 【${item.subject}】${item.concept} <span style="font-size:12px; color:#666;">(${item.unit})</span>
                             </div>
                         `;
-                        if (item.questionText && !item.fullImage && !item.image) {
-                            qTextHtml += `<div class="md-content" style="margin-bottom: 15px; font-size: 14px; line-height: 1.6; color: #333;">${marked.parse(item.questionText)}</div>`;
+                        if (item.isRawImage) {
+                            if (item.questionText) qTextHtml += `<div class="md-content" style="margin-bottom: 15px;">${marked.parse(item.questionText)}</div>`;
+                        } else {
+                            if (item.questionText && !item.fullImage && !item.image) {
+                                qTextHtml += `<div class="md-content" style="margin-bottom: 15px;">${marked.parse(item.questionText)}</div>`;
+                            }
                         }
                     });
 
                     let mergedImgSrc = null;
-                    if (!imgKey.startsWith("text_only_")) {
-                        const annoSrcs = items.map(i => i.annotationImage);
-                        mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                    if (imgKey && !imgKey.startsWith("text_only_")) {
+                        // 🌟 測驗模式：強制傳入空陣列 []，自動隱藏所有筆跡！
+                        mergedImgSrc = await mergeImagesToBase64(imgKey, []);
                         imagesToPreload.add(mergedImgSrc);
                     }
 
-                    // 🌟 核心修改：實戰卷的題目圖片加入 max-height: 240mm;
+                    const isRaw = items.some(i => i.isRawImage);
+                    const maxWidth = isRaw ? '85%' : '100%';
+
+                    // 🌟 核心修改：將 max-height 放寬到 25cm
                     contentHtml += `
-                        <div style="margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px dashed #cccccc;">
-                            <div style="page-break-inside: avoid;">
+                        <div style="margin-bottom: 35px; padding-bottom: 40px; border-bottom: 1px dashed #cccccc;">
+                            <div class="avoid-break">
                                 ${headersHtml}
-                                ${qTextHtml}
                             </div>
-                            ${mergedImgSrc ? `<div style="page-break-inside: avoid; margin-top: 10px; width: 100%; text-align: center;"><img src="${mergedImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>` : ''}
+                            ${qTextHtml}
+                            ${mergedImgSrc ? `<div class="avoid-break" style="margin-top: 10px; width: 100%; text-align: center;"><img src="${mergedImgSrc}" style="max-width: ${maxWidth}; max-height: 25cm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>` : ''}
+                            
+                            <!-- 🌟 增加留白空間供學生計算 (約 150px 高度) -->
+                            <div style="min-height: 150px;"></div>
                         </div>
                     `;
                     questionCounter += items.length;
                 }
 
                 contentHtml += `
-                    <div style="page-break-before: always;">
+                    <div class="page-break">
                         <h2 style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 30px; font-size: 24px;">
                             解答與解析
                         </h2>
@@ -2114,29 +2083,35 @@
                         const expText = item.explanationText;
                         const hasNotes = item.notes && item.notes.trim() !== "";
                         
-                        if (expImgSrc || (expText && !expImgSrc) || hasNotes) {
+                        if (expImgSrc || expText || hasNotes) {
                             contentHtml += `
-                                <div style="page-break-inside: avoid; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-                                    <div style="font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #333;">
+                                <div style="margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                                    <div class="avoid-break" style="font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #333;">
                                         Q${questionCounter + idx} 解析：
                                     </div>
-                                    ${hasNotes ? `<div style="font-size: 13px; color: #444; background: #f9f9f9; padding: 8px; border-left: 3px solid #6366f1; margin-bottom: 10px;">備註: ${item.notes}</div>` : ''}
+                                    ${hasNotes ? `<div class="avoid-break" style="background: #f9f9f9; padding: 8px; border-left: 3px solid #6366f1; margin-bottom: 10px;">備註: ${item.notes}</div>` : ''}
                             `;
                             
-                            if (expText && !expImgSrc) {
-                                contentHtml += `<div class="md-content" style="font-size: 14px; line-height: 1.6; color: #444; margin-bottom: 10px;">${marked.parse(expText)}</div>`;
-                            }
-                            
-                            if (expImgSrc) {
-                                imagesToPreload.add(expImgSrc);
-                                // 🌟 核心修改：實戰卷的詳解圖片加入 max-height: 240mm;
-                                contentHtml += `<div style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>`;
+                            if (item.isRawImage) {
+                                if (expText) contentHtml += `<div class="md-content" style="margin-bottom: 10px;">${marked.parse(expText)}</div>`;
+                                if (expImgSrc) {
+                                    imagesToPreload.add(expImgSrc);
+                                    // 🌟 核心修改：將 max-height 放寬到 25cm
+                                    contentHtml += `<div class="avoid-break" style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 85%; max-height: 25cm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>`;
+                                }
+                            } else {
+                                if (expText && !expImgSrc) contentHtml += `<div class="md-content" style="margin-bottom: 10px;">${marked.parse(expText)}</div>`;
+                                if (expImgSrc) {
+                                    imagesToPreload.add(expImgSrc);
+                                    // 🌟 核心修改：將 max-height 放寬到 25cm
+                                    contentHtml += `<div class="avoid-break" style="width: 100%; text-align: center;"><img src="${expImgSrc}" style="max-width: 100%; max-height: 25cm; width: auto; height: auto; object-fit: contain; display: inline-block;" /></div>`;
+                                }
                             }
                             contentHtml += `</div>`;
                         } else {
                             contentHtml += `
-                                <div style="page-break-inside: avoid; margin-bottom: 20px;">
-                                    <div style="font-size: 14px; color: #666;">Q${questionCounter + idx}：無提供解析或備註。</div>
+                                <div class="avoid-break" style="margin-bottom: 20px;">
+                                    <div style="color: #666;">Q${questionCounter + idx}：無提供解析或備註。</div>
                                 </div>
                             `;
                         }
@@ -2162,47 +2137,176 @@
             });
             await Promise.all(preloadPromises);
             
-            await new Promise(r => setTimeout(r, 150));
-
             btn.innerText = "⏳ 產生 PDF 中...";
             
-            const hiddenWrapper = document.createElement('div');
-            hiddenWrapper.style.position = 'absolute';
-            hiddenWrapper.style.top = '-9999px';
-            hiddenWrapper.style.left = '-9999px';
-            
+            // 🌟 核心修改：使用 iframe 呼叫瀏覽器原生列印，保留真實文字與向量公式
             const tempContainer = document.createElement('div');
-            tempContainer.style.width = '800px';
-            tempContainer.style.backgroundColor = '#ffffff';
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.top = '-9999px';
+            tempContainer.style.left = '-9999px';
             tempContainer.innerHTML = contentHtml;
-            
-            hiddenWrapper.appendChild(tempContainer);
-            document.body.appendChild(hiddenWrapper);
-            
+            document.body.appendChild(tempContainer);
             applyMathRendering(tempContainer); 
 
-            const opt = {
-                margin:       15,
-                filename:     mode === 'guide' ? '學測錯題精華講義.pdf' : '學測錯題實戰卷.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'] }
-            };
+            const renderedHtml = tempContainer.innerHTML;
+            document.body.removeChild(tempContainer);
 
-            await html2pdf().set(opt).from(tempContainer).save();
-            
-            document.body.removeChild(hiddenWrapper);
-            closeExportModal();
-            cancelSelection();
+            const printFrame = document.createElement('iframe');
+            printFrame.style.position = 'fixed';
+            printFrame.style.right = '0';
+            printFrame.style.bottom = '0';
+            printFrame.style.width = '0';
+            printFrame.style.height = '0';
+            printFrame.style.border = '0';
+            document.body.appendChild(printFrame);
+
+            const doc = printFrame.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${mode === 'guide' ? '學測錯題精華講義' : '學測錯題實戰卷'}</title>
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+                    <style>
+                        /* 🌟 核心修改：強制設定 PDF 邊界為上下 1.2cm，左右 1.5cm */
+                        @page { margin: 12mm 15mm; } 
+                        body { font-family: "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #000; background: #fff; margin: 0; padding: 0; }
+                        .md-content { font-size: 15px; line-height: 1.6; }
+                        .md-content p { margin: 0 0 8px 0; }
+                        .md-content strong { font-weight: bold; color: #000; }
+                        .md-content blockquote { border-left: 4px solid #cbd5e1; padding-left: 12px; margin: 8px 0; color: #475569; background-color: #f8fafc; padding-top: 8px; padding-bottom: 8px; }
+                        .md-content ul, .md-content ol { margin: 0 0 10px 0; padding-left: 24px; }
+                        .md-content code { background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+                        .page-break { page-break-before: always; }
+                        .avoid-break { page-break-inside: avoid; }
+                    </style>
+                </head>
+                <body>
+                    ${renderedHtml}
+                </body>
+                </html>
+            `);
+            doc.close();
+
+            // 等待 iframe 內的圖片載入
+            const iframeImgs = doc.querySelectorAll('img');
+            const iframePromises = Array.from(iframeImgs).map(img => new Promise(res => {
+                if (img.complete) res();
+                else { img.onload = res; img.onerror = res; }
+            }));
+            await Promise.all(iframePromises);
+
+            setTimeout(() => {
+                alert("💡 提示：請在接下來的列印視窗中，將目的地選擇為「另存為 PDF」！");
+                printFrame.contentWindow.focus();
+                printFrame.contentWindow.print();
+                document.body.removeChild(printFrame);
+                closeExportModal();
+                cancelSelection();
+                btn.innerText = originalText;
+                allBtns.forEach(b => b.disabled = false);
+            }, 500);
 
         } catch (err) {
             console.error("PDF 匯出錯誤:", err);
             alert("PDF匯出失敗，請重試。");
-        } finally {
             btn.innerText = originalText;
             allBtns.forEach(b => b.disabled = false);
         }
+    }
+
+    // --- Word 專用：動態將「文字+圖片」排版好並拍成一張大圖，保護數學公式 ---
+    async function generateWordGroupImage(items, imgKey, type, startQNum) {
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.top = '-9999px';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.width = '800px'; // 模擬 A4 寬度
+        tempDiv.style.backgroundColor = '#ffffff';
+        tempDiv.style.color = '#000000';
+        tempDiv.style.padding = '30px';
+        tempDiv.style.boxSizing = 'border-box';
+        tempDiv.style.fontFamily = 'sans-serif';
+
+        let html = `<style>
+            .md-content { font-size: 18px; line-height: 1.6; margin-bottom: 15px; }
+            .md-content p { margin: 0 0 10px 0; }
+            .katex { color: #000000 !important; }
+        </style>`;
+
+        let hasContent = false;
+
+        if (type === 'question') {
+            let headersHtml = '';
+            let qTextHtml = '';
+            items.forEach((item, idx) => {
+                headersHtml += `<h3 style="color: #333; margin-bottom: 10px; font-size: 20px;">Q${startQNum + idx}. 【${item.subject}】${item.unit} - ${item.concept}</h3>`;
+                if (item.isRawImage) {
+                    if (item.questionText) qTextHtml += `<div class="md-content">${marked.parse(item.questionText)}</div>`;
+                } else {
+                    if (item.questionText && !item.fullImage && !item.image) {
+                        qTextHtml += `<div class="md-content">${marked.parse(item.questionText)}</div>`;
+                    }
+                }
+            });
+
+            html += headersHtml + qTextHtml;
+            hasContent = true;
+
+            let mergedImgSrc = null;
+            if (imgKey && !imgKey.startsWith("text_only_")) {
+                // 🌟 測驗模式：強制傳入空陣列 []，自動隱藏所有筆跡！
+                mergedImgSrc = await mergeImagesToBase64(imgKey, []);
+            }
+
+            if (mergedImgSrc) {
+                const isRaw = items.some(i => i.isRawImage);
+                const maxWidth = isRaw ? '85%' : '100%';
+                html += `<div style="text-align:center; margin-top:15px;"><img src="${mergedImgSrc}" style="max-width: ${maxWidth}; height: auto; object-fit: contain;"></div>`;
+            }
+        } else {
+            // Explanation
+            const item = items[0];
+            const expImgSrc = item.fullExplanationImage || item.explanationImage;
+            const expText = item.explanationText;
+            const hasNotes = item.notes && item.notes.trim() !== "";
+
+            if (!expImgSrc && !expText && !hasNotes) return null;
+
+            html += `<h3 style="color: #333; margin-bottom: 10px; font-size: 20px;">Q${startQNum} 解析：</h3>`;
+            if (hasNotes) html += `<div style="background: #f9f9f9; padding: 10px; border-left: 4px solid #6366f1; margin-bottom: 15px; font-size: 16px;">備註: ${item.notes}</div>`;
+            
+            if (item.isRawImage) {
+                if (expText) html += `<div class="md-content">${marked.parse(expText)}</div>`;
+                if (expImgSrc) html += `<div style="text-align:center; margin-top:15px;"><img src="${expImgSrc}" style="max-width: 85%; height: auto; object-fit: contain;"></div>`;
+            } else {
+                if (expText && !expImgSrc) html += `<div class="md-content">${marked.parse(expText)}</div>`;
+                if (expImgSrc) html += `<div style="text-align:center; margin-top:15px;"><img src="${expImgSrc}" style="max-width: 100%; height: auto; object-fit: contain;"></div>`;
+            }
+            hasContent = true;
+        }
+
+        if (!hasContent) return null;
+
+        tempDiv.innerHTML = html;
+        document.body.appendChild(tempDiv);
+        applyMathRendering(tempDiv); // 渲染數學公式
+
+        // 等待圖片載入
+        const imgs = tempDiv.querySelectorAll('img');
+        const promises = Array.from(imgs).map(img => new Promise(res => {
+            if (img.complete) res();
+            else { img.onload = res; img.onerror = res; }
+        }));
+        await Promise.all(promises);
+        await new Promise(r => setTimeout(r, 300)); // 等待 KaTeX 渲染完成
+
+        // 拍成一張大圖
+        const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
+        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+        document.body.removeChild(tempDiv);
+        return base64;
     }
 
     /* --- 匯出 Word (實戰測驗模式) --- */
@@ -2238,30 +2342,16 @@
 
             // --- 第一階段：印出所有題目 ---
             for (let [imgKey, items] of imageMap.entries()) {
-                let headersHtml = '';
-                let qTextHtml = '';
-                items.forEach((item, idx) => {
-                    headersHtml += `<h3 style="color: #333; margin-bottom: 5px; font-family: sans-serif;">Q${questionCounter + idx}. 【${item.subject}】${item.unit} - ${item.concept}</h3>`;
-                    if (item.questionText && !item.fullImage && !item.image) {
-                        qTextHtml += `<div style="margin-bottom: 10px; font-family: sans-serif;">${marked.parse(item.questionText)}</div>`;
-                    }
-                });
-
-                let mergedImgSrc = null;
-                if (!imgKey.startsWith("text_only_")) {
-                    const annoSrcs = items.map(i => i.annotationImage);
-                    mergedImgSrc = await mergeImagesToBase64(imgKey, annoSrcs);
+                // 呼叫 Word 專用截圖函數，把這題的文字跟圖片拍成一張完美的圖
+                const blockBase64 = await generateWordGroupImage(items, imgKey, 'question', questionCounter);
+                if (blockBase64) {
+                    contentHtml += `
+                        <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #ccc;">
+                            <p style="text-align: center;"><img src="${blockBase64}" width="650" /></p>
+                            <br><br><br><br> <!-- 🌟 增加留白空間 (多加幾個 br) -->
+                        </div>
+                    `;
                 }
-
-                // 🌟 核心修改：使用傳統 HTML 屬性 width="560" (約 14.8 公分)，強制 Word 縮小圖片
-                contentHtml += `
-                    <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #ccc;">
-                        ${headersHtml}
-                        ${qTextHtml}
-                        ${mergedImgSrc ? `<p style="text-align: center;"><img src="${mergedImgSrc}" width="560" /></p>` : ''}
-                        <br><br>
-                    </div>
-                `;
                 questionCounter += items.length;
             }
 
@@ -2270,30 +2360,17 @@
             contentHtml += `<h1 style="text-align: center; font-family: sans-serif; margin-top: 30px; margin-bottom: 30px;">解答與解析</h1>`;
 
             // --- 第二階段：印出所有詳解 ---
-            questionCounter = 1; // 重置題號計數器
+            questionCounter = 1; 
             for (let [imgKey, items] of imageMap.entries()) {
                 for (let idx = 0; idx < items.length; idx++) {
                     const item = items[idx];
-                    const expImgSrc = item.fullExplanationImage || item.explanationImage;
-                    const expText = item.explanationText;
-                    const hasNotes = item.notes && item.notes.trim() !== "";
-                    
-                    if (expImgSrc || (expText && !expImgSrc) || hasNotes) {
+                    const blockBase64 = await generateWordGroupImage([item], null, 'explanation', questionCounter + idx);
+                    if (blockBase64) {
                         contentHtml += `
                             <div style="margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-                                <h3 style="color: #333; font-family: sans-serif; margin-bottom: 10px;">Q${questionCounter + idx} 解析：</h3>
-                                ${hasNotes ? `<p style="color: #444; font-size: 14px; font-family: sans-serif; background: #f9f9f9; padding: 10px; border-left: 3px solid #6366f1; margin-bottom: 15px;">備註: ${item.notes}</p>` : ''}
+                                <p style="text-align: center;"><img src="${blockBase64}" width="650" /></p>
+                            </div>
                         `;
-                        
-                        if (expText && !expImgSrc) {
-                            contentHtml += `<div style="font-family: sans-serif; margin-bottom: 15px; line-height: 1.6;">${marked.parse(expText)}</div>`;
-                        }
-                        
-                        if (expImgSrc) {
-                            // 🌟 核心修改：詳解圖片也使用傳統 HTML 屬性 width="560"
-                            contentHtml += `<p style="text-align: center;"><img src="${expImgSrc}" width="560" /></p>`;
-                        }
-                        contentHtml += `</div>`;
                     } else {
                         contentHtml += `
                             <div style="margin-bottom: 20px;">
@@ -2308,9 +2385,9 @@
             // --- 渲染與匯出 ---
             const tempContainer = document.createElement('div');
             tempContainer.innerHTML = contentHtml;
-            applyMathRendering(tempContainer); 
 
-            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>學測錯題實戰卷</title></head><body>";
+            // 🌟 核心修改：Word 邊距縮小到 1cm
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>學測錯題實戰卷</title><style>@page { margin: 1cm; } body { font-family: sans-serif; }</style></head><body>";
             const footer = "</body></html>"; 
             const sourceHTML = header + tempContainer.innerHTML + footer;
             
@@ -2633,141 +2710,6 @@
         } 
     }
 
-    // --- 核心進化：將文字與圖片合併渲染成單一高畫質圖片 ---
-    async function generateQuestionImage(qText, file) {
-        if (!qText && !file) return null;
-
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute'; 
-        tempDiv.style.top = '0';
-        tempDiv.style.left = '-9999px'; 
-        tempDiv.style.width = '800px';
-        tempDiv.style.backgroundColor = '#ffffff'; 
-        tempDiv.style.color = '#000000'; 
-        // 🌟 關鍵修改：把 padding-bottom 設為 400px，讓白色背景自然往下延伸，提供計算空間
-        tempDiv.style.padding = '40px 40px 400px 40px';
-        tempDiv.style.boxSizing = 'border-box';
-        
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .export-md { font-family: sans-serif; font-size: 18px; line-height: 1.6; }
-            .export-md p { margin: 0 0 15px 0; }
-            .export-md strong { color: #2563eb; }
-            .export-md blockquote { border-left: 4px solid #cbd5e1; padding-left: 15px; margin: 10px 0; color: #475569; background: #f8fafc; padding: 10px; }
-            .export-md code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-            .katex { color: #000000 !important; } 
-        `;
-        tempDiv.appendChild(style);
-
-        if (qText) {
-            const qDiv = document.createElement('div');
-            qDiv.className = 'export-md';
-            qDiv.innerHTML = marked.parse(qText);
-            tempDiv.appendChild(qDiv);
-        }
-
-        if (file) {
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = qText ? '20px auto 0 auto' : '0 auto';
-            tempDiv.appendChild(img);
-            
-            await new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = resolve;
-            });
-        }
-
-        // 🌟 已經刪除原本的「虛線筆記區框框」
-
-        document.body.appendChild(tempDiv);
-        applyMathRendering(tempDiv);
-
-        await new Promise(r => setTimeout(r, 500)); 
-
-        const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
-        const base64 = canvas.toDataURL('image/jpeg', 0.85);
-
-        document.body.removeChild(tempDiv);
-        if (file) URL.revokeObjectURL(tempDiv.querySelector('img').src);
-
-        return base64;
-    }
-
-    async function generateExplanationImage(expText, file) {
-        if (!expText && !file) return null;
-
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute'; 
-        tempDiv.style.top = '0';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.width = '800px';
-        tempDiv.style.backgroundColor = '#ffffff';
-        tempDiv.style.color = '#000000';
-        // 🌟 詳解區不需要留白，所以 padding 恢復正常
-        tempDiv.style.padding = '40px';
-        tempDiv.style.boxSizing = 'border-box';
-        
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .export-md { font-family: sans-serif; font-size: 16px; line-height: 1.6; }
-            .export-md p { margin: 0 0 15px 0; }
-            .export-md strong { color: #2563eb; }
-            .export-md blockquote { border-left: 4px solid #cbd5e1; padding-left: 15px; margin: 10px 0; color: #475569; background: #f8fafc; padding: 10px; }
-            .export-md code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-            .katex { color: #000000 !important; }
-        `;
-        tempDiv.appendChild(style);
-
-        const title = document.createElement('strong');
-        title.style.color = '#d97706'; 
-        title.style.fontSize = '20px';
-        title.style.display = 'block';
-        title.style.marginBottom = '20px';
-        title.style.borderBottom = '2px solid #fde68a';
-        title.style.paddingBottom = '10px';
-        title.innerText = '💡 解答與解析';
-        tempDiv.appendChild(title);
-
-        if (expText) {
-            const expDiv = document.createElement('div');
-            expDiv.className = 'export-md';
-            expDiv.innerHTML = marked.parse(expText);
-            tempDiv.appendChild(expDiv);
-        }
-
-        if (file) {
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = expText ? '20px auto 0 auto' : '0 auto';
-            tempDiv.appendChild(img);
-            
-            await new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = resolve;
-            });
-        }
-
-        document.body.appendChild(tempDiv);
-        applyMathRendering(tempDiv);
-
-        await new Promise(r => setTimeout(r, 500));
-
-        const canvas = await html2canvas(tempDiv, { scale: 2, logging: false, useCORS: true });
-        const base64 = canvas.toDataURL('image/jpeg', 0.85);
-
-        document.body.removeChild(tempDiv);
-        if (file) URL.revokeObjectURL(tempDiv.querySelector('img').src);
-
-        return base64;
-    }
-
     async function saveAllQuestions() {
         if (selectedFilesQueue.length === 0) return;
         const submitBtn = document.getElementById("submitAllBtn"); submitBtn.disabled = true; submitBtn.innerText = "⏳ 儲存上傳中...";
@@ -2787,22 +2729,23 @@
                 let finalQFile = qImgInput.stitchedFile || (qImgInput.files.length > 0 ? qImgInput.files[0] : qItem.file);
                 let finalExpFile = expImgInput.stitchedFile || (expImgInput.files.length > 0 ? expImgInput.files[0] : null);
 
-                if (!metaText && !qText && !finalQFile) continue; 
-
-                let fullBase64 = await generateQuestionImage(qText, finalQFile);
-                if (!fullBase64) continue;
+                // 🌟 核心修改：不再把文字跟圖片黏在一起，而是單純壓縮圖片
+                let fullBase64 = await compressImage(finalQFile);
+                if (!qText && !fullBase64) continue; // 如果沒文字也沒圖片就跳過
                 
                 let thumbBase64 = "";
-                const img = new Image();
-                img.src = fullBase64;
-                await new Promise(r => img.onload = r);
-                const thumbCanvas = document.createElement('canvas');
-                thumbCanvas.width = 300;
-                thumbCanvas.height = img.height * (300 / img.width);
-                thumbCanvas.getContext('2d').drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height);
-                thumbBase64 = thumbCanvas.toDataURL('image/jpeg', 0.5);
+                if (fullBase64) {
+                    const img = new Image();
+                    img.src = fullBase64;
+                    await new Promise(r => img.onload = r);
+                    const thumbCanvas = document.createElement('canvas');
+                    thumbCanvas.width = 300;
+                    thumbCanvas.height = img.height * (300 / img.width);
+                    thumbCanvas.getContext('2d').drawImage(img, 0, 0, thumbCanvas.width, thumbCanvas.height);
+                    thumbBase64 = thumbCanvas.toDataURL('image/jpeg', 0.5);
+                }
                 
-                let expBase64 = await generateExplanationImage(expText, finalExpFile);
+                let expBase64 = await compressImage(finalExpFile);
 
                 const parts = metaText.split(/[,，]/).map(p => p.trim());
                 const subject = parts[0] || "未分類";
@@ -2817,8 +2760,9 @@
                     questionText: qText, 
                     explanationText: expText,
                     thumbnail: thumbBase64, 
-                    hasExplanation: !!expBase64, 
+                    hasExplanation: !!expBase64 || !!expText, 
                     isFormula: isFormula, 
+                    isRawImage: true, // 🌟 新增標記：代表這是新版「文字與圖片分離」的資料
                     reviewCount: 0, tags: [], timestamp: baseGroupId + timeOffset, groupId: baseGroupId
                 };
                 batch.set(docRef, questionMeta);
