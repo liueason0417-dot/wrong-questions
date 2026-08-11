@@ -2030,7 +2030,7 @@
                     items.forEach((item, idx) => {
                         headersHtml += `
                             <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
-                                Q${questionCounter + idx}. 【${item.subject}】${item.concept} <span style="font-size:12px; color:#666;">(${item.unit})</span>
+                                Q${questionCounter + idx}. 【${item.subject}】
                             </div>
                         `;
                         if (item.isRawImage) {
@@ -2241,7 +2241,7 @@
             let headersHtml = '';
             let qTextHtml = '';
             items.forEach((item, idx) => {
-                headersHtml += `<h3 style="color: #333; margin-bottom: 10px; font-size: 20px;">Q${startQNum + idx}. 【${item.subject}】${item.unit} - ${item.concept}</h3>`;
+                headersHtml += `<h3 style="color: #333; margin-bottom: 10px; font-size: 20px;">Q${startQNum + idx}. 【${item.subject}】</h3>`;
                 if (item.isRawImage) {
                     if (item.questionText) qTextHtml += `<div class="md-content">${marked.parse(item.questionText)}</div>`;
                 } else {
